@@ -1,0 +1,1649 @@
+  <!DOCTYPE html>
+  <html lang="ru">
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>CopyBot Dashboard</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Unbounded:wght@300;400;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #111118;
+      --card: #16161f;
+      --border: #1e1e2e;
+      --accent: #7c3aed;
+      --accent2: #06b6d4;
+      --accent3: #10b981;
+      --danger: #ef4444;
+      --warn: #f59e0b;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --glow: rgba(124, 58, 237, 0.3);
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Фоновая сетка */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(124,58,237,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(124,58,237,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      max-width: 430px;
+      margin: 0 auto;
+      padding: 0 0 100px;
+    }
+
+    /* ===== HEADER ===== */
+    .header {
+      padding: 20px 16px 16px;
+      background: linear-gradient(180deg, rgba(124,58,237,0.12) 0%, transparent 100%);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      backdrop-filter: blur(20px);
+      z-index: 100;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 20px var(--glow);
+    }
+
+    .logo-text {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #fff, var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .live-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(16,185,129,0.1);
+      border: 1px solid rgba(16,185,129,0.3);
+      border-radius: 20px;
+      padding: 4px 10px;
+      font-size: 11px;
+      color: var(--accent3);
+      font-weight: 500;
+    }
+
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--accent3);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    /* ===== TABS ===== */
+    .tabs {
+      display: flex;
+      padding: 12px 16px 0;
+      gap: 4px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .tabs::-webkit-scrollbar { display: none; }
+
+    .tab {
+      flex-shrink: 0;
+      padding: 8px 14px;
+      border-radius: 8px 8px 0 0;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+      background: transparent;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .tab.active {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-bottom: 1px solid var(--card);
+      position: relative;
+      top: 1px;
+    }
+
+    /* ===== SECTIONS ===== */
+    .section { display: none; padding: 16px; }
+    .section.active { display: block; }
+
+    /* ===== STATS GRID ===== */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      position: relative;
+      overflow: hidden;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .stat-card:nth-child(1) { animation-delay: 0.05s; }
+    .stat-card:nth-child(2) { animation-delay: 0.1s; }
+    .stat-card:nth-child(3) { animation-delay: 0.15s; }
+    .stat-card:nth-child(4) { animation-delay: 0.2s; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .stat-card::after {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 60px; height: 60px;
+      border-radius: 50%;
+      filter: blur(20px);
+      opacity: 0.15;
+    }
+
+    .stat-card.purple::after { background: var(--accent); }
+    .stat-card.cyan::after { background: var(--accent2); }
+    .stat-card.green::after { background: var(--accent3); }
+    .stat-card.amber::after { background: var(--warn); }
+
+    .stat-label {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .stat-value.purple { color: var(--accent); }
+    .stat-value.cyan { color: var(--accent2); }
+    .stat-value.green { color: var(--accent3); }
+    .stat-value.amber { color: var(--warn); }
+
+    .stat-sub {
+      font-size: 10px;
+      color: var(--muted);
+    }
+
+    /* ===== STATUS CARD ===== */
+    .status-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 10px;
+      animation: fadeUp 0.4s ease 0.25s both;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .status-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .status-row:first-child { padding-top: 0; }
+
+    .status-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .status-icon { font-size: 16px; }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 3px 10px;
+      border-radius: 20px;
+    }
+
+    .status-badge.on {
+      background: rgba(16,185,129,0.1);
+      color: var(--accent3);
+      border: 1px solid rgba(16,185,129,0.2);
+    }
+
+    .status-badge.off {
+      background: rgba(100,116,139,0.1);
+      color: var(--muted);
+      border: 1px solid rgba(100,116,139,0.2);
+    }
+
+    .status-badge.error {
+      background: rgba(239,68,68,0.1);
+      color: var(--danger);
+      border: 1px solid rgba(239,68,68,0.2);
+    }
+
+    .badge-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    .badge-dot.pulsing { animation: pulse 1.5s infinite; }
+
+    /* ===== CHANNEL CARD ===== */
+    .channel-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      animation: fadeUp 0.4s ease 0.3s both;
+    }
+
+    .channel-title {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+
+    .channel-flow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .channel-box {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+
+    .channel-type {
+      font-size: 9px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 3px;
+    }
+
+    .channel-name {
+      font-size: 12px;
+      color: var(--text);
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .flow-arrow {
+      color: var(--accent);
+      font-size: 20px;
+      flex-shrink: 0;
+      animation: arrowPulse 2s ease infinite;
+    }
+
+    @keyframes arrowPulse {
+      0%, 100% { opacity: 0.4; transform: translateX(0); }
+      50% { opacity: 1; transform: translateX(3px); }
+    }
+
+    /* ===== ACTION BUTTONS ===== */
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+      animation: fadeUp 0.4s ease 0.35s both;
+    }
+
+    .action-btn {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text);
+      font-size: 11px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .action-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, transparent, rgba(124,58,237,0.05));
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .action-btn:active { transform: scale(0.96); }
+    .action-btn:active::before { opacity: 1; }
+
+    .action-btn.primary {
+      border-color: rgba(124,58,237,0.4);
+      background: linear-gradient(135deg, var(--card), rgba(124,58,237,0.08));
+    }
+
+    .action-btn.danger {
+      border-color: rgba(239,68,68,0.3);
+      background: linear-gradient(135deg, var(--card), rgba(239,68,68,0.05));
+      color: var(--danger);
+    }
+
+    .action-btn.success {
+      border-color: rgba(16,185,129,0.3);
+      background: linear-gradient(135deg, var(--card), rgba(16,185,129,0.05));
+      color: var(--accent3);
+    }
+
+    .action-emoji { font-size: 24px; }
+
+    /* ===== LOGS ===== */
+    .log-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+      animation: fadeUp 0.4s ease 0.4s both;
+    }
+
+    .log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .log-title {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .log-clear {
+      font-size: 10px;
+      color: var(--danger);
+      cursor: pointer;
+      background: none;
+      border: none;
+      font-family: 'JetBrains Mono', monospace;
+      opacity: 0.7;
+    }
+
+    .log-item {
+      display: flex;
+      gap: 10px;
+      padding: 7px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      align-items: flex-start;
+    }
+
+    .log-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+    .log-time { color: var(--muted); flex-shrink: 0; font-size: 10px; padding-top: 1px; }
+    .log-msg { flex: 1; line-height: 1.5; }
+    .log-msg.success { color: var(--accent3); }
+    .log-msg.warn { color: var(--warn); }
+    .log-msg.error { color: var(--danger); }
+    .log-msg.info { color: var(--accent2); }
+
+    /* ===== SETTINGS ===== */
+    .settings-group {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      margin-bottom: 12px;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .settings-group:nth-child(1) { animation-delay: 0.05s; }
+    .settings-group:nth-child(2) { animation-delay: 0.1s; }
+    .settings-group:nth-child(3) { animation-delay: 0.15s; }
+
+    .group-title {
+      padding: 10px 16px;
+      font-size: 9px;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      border-bottom: 1px solid var(--border);
+      background: rgba(124,58,237,0.05);
+    }
+
+    .setting-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .setting-row:last-child { border-bottom: none; }
+    .setting-row:active { background: rgba(255,255,255,0.02); }
+
+    .setting-info { flex: 1; }
+    .setting-name { font-size: 13px; margin-bottom: 2px; }
+    .setting-desc { font-size: 10px; color: var(--muted); }
+
+    /* Toggle switch */
+    .toggle {
+      width: 44px;
+      height: 24px;
+      background: var(--border);
+      border-radius: 12px;
+      position: relative;
+      transition: background 0.3s;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .toggle.on { background: var(--accent); }
+
+    .toggle::after {
+      content: '';
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 20px; height: 20px;
+      background: white;
+      border-radius: 50%;
+      transition: transform 0.3s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    .toggle.on::after { transform: translateX(20px); }
+
+    /* ===== COPY SECTION ===== */
+    .copy-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 12px;
+      animation: fadeUp 0.4s ease both;
+    }
+
+    .copy-card:nth-child(1) { animation-delay: 0.05s; }
+    .copy-card:nth-child(2) { animation-delay: 0.1s; }
+    .copy-card:nth-child(3) { animation-delay: 0.15s; }
+
+    .copy-card-title {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 12px;
+    }
+
+    .input-field {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.2s;
+      margin-bottom: 8px;
+    }
+
+    .input-field:focus { border-color: var(--accent); }
+    .input-field::placeholder { color: var(--muted); }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .big-btn {
+      width: 100%;
+      padding: 13px;
+      border-radius: 12px;
+      border: none;
+      font-family: 'Unbounded', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .big-btn.accent {
+      background: linear-gradient(135deg, var(--accent), #5b21b6);
+      color: white;
+      box-shadow: 0 4px 20px rgba(124,58,237,0.3);
+    }
+
+    .big-btn.accent:active { transform: scale(0.97); box-shadow: none; }
+
+    .big-btn.outline {
+      background: transparent;
+      color: var(--accent2);
+      border: 1px solid rgba(6,182,212,0.3);
+    }
+
+    /* ===== PROGRESS BAR ===== */
+    .progress-wrap {
+      margin-top: 12px;
+      display: none;
+    }
+
+    .progress-wrap.show { display: block; }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 10px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 2px;
+      transition: width 0.3s;
+      width: 0%;
+    }
+
+    /* ===== SCHEDULER ===== */
+    .scheduler-timer {
+      background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(6,182,212,0.05));
+      border: 1px solid rgba(124,58,237,0.2);
+      border-radius: 14px;
+      padding: 20px;
+      text-align: center;
+      margin-bottom: 12px;
+      animation: fadeUp 0.4s ease 0.05s both;
+    }
+
+    .timer-label {
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 10px;
+    }
+
+    .timer-value {
+      font-family: 'Unbounded', sans-serif;
+      font-size: 36px;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+
+    .timer-sub {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    /* ===== BOTTOM NAV ===== */
+    .bottom-nav {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      display: flex;
+      padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
+      backdrop-filter: blur(20px);
+      z-index: 200;
+      max-width: 430px;
+      margin: 0 auto;
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      cursor: pointer;
+      padding: 4px 0;
+      transition: all 0.2s;
+    }
+
+    .nav-icon { font-size: 22px; }
+
+    .nav-label {
+      font-size: 9px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      transition: color 0.2s;
+    }
+
+    .nav-item.active .nav-label { color: var(--accent); }
+    .nav-item.active .nav-icon { filter: drop-shadow(0 0 8px var(--accent)); }
+
+    /* ===== TOAST ===== */
+    .toast {
+      position: fixed;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 18px;
+      font-size: 12px;
+      opacity: 0;
+      transition: all 0.3s;
+      z-index: 999;
+      white-space: nowrap;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast.success { border-color: rgba(16,185,129,0.4); color: var(--accent3); }
+    .toast.error { border-color: rgba(239,68,68,0.4); color: var(--danger); }
+    .toast.info { border-color: rgba(6,182,212,0.4); color: var(--accent2); }
+
+    /* ===== TAG FILTER ===== */
+    .tags-wrap {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 8px;
+    }
+
+    .tag {
+      background: rgba(124,58,237,0.12);
+      border: 1px solid rgba(124,58,237,0.25);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 11px;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .tag-remove {
+      cursor: pointer;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+
+    .tag-remove:hover { opacity: 1; }
+
+    /* Числовой ввод */
+    .number-input {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .num-btn {
+      width: 40px;
+      height: 40px;
+      background: var(--border);
+      border: none;
+      color: var(--text);
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+      font-family: monospace;
+      flex-shrink: 0;
+    }
+
+    .num-btn:active { background: var(--accent); }
+
+    .num-display {
+      flex: 1;
+      text-align: center;
+      font-family: 'Unbounded', sans-serif;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      background: transparent;
+      border: none;
+      outline: none;
+    }
+  </style>
+  </head>
+  <body>
+  <div class="app">
+    <!-- HEADER -->
+    <div class="header">
+      <div class="header-top">
+        <div class="logo">
+          <div class="logo-icon">⚡</div>
+          <div class="logo-text">CopyBot</div>
+        </div>
+        <div class="live-badge" id="liveBadge">
+          <div class="live-dot"></div>
+          <span>ONLINE</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('dashboard', this)">Главная</button>
+      <button class="tab" onclick="switchTab('copy', this)">Копировать</button>
+      <button class="tab" onclick="switchTab('scheduler', this)">Планировщик</button>
+      <button class="tab" onclick="switchTab('settings', this)">Настройки</button>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div class="section active" id="dashboard">
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card purple">
+          <div class="stat-label">Скопировано</div>
+          <div class="stat-value purple" id="totalCopied">0</div>
+          <div class="stat-sub">всего постов</div>
+        </div>
+        <div class="stat-card cyan">
+          <div class="stat-label">Сегодня</div>
+          <div class="stat-value cyan" id="todayCopied">0</div>
+          <div class="stat-sub">за 24 часа</div>
+        </div>
+        <div class="stat-card green">
+          <div class="stat-label">Найдено</div>
+          <div class="stat-value green" id="totalFound">0</div>
+          <div class="stat-sub">по ключевым</div>
+        </div>
+        <div class="stat-card amber">
+          <div class="stat-label">Пропущено</div>
+          <div class="stat-value amber" id="totalSkipped">0</div>
+          <div class="stat-sub">дубликатов</div>
+        </div>
+      </div>
+
+      <!-- Status -->
+      <div class="status-card">
+        <div class="status-row">
+          <div class="status-name"><span class="status-icon">🔐</span> Авторизация</div>
+          <div class="status-badge on" id="authStatus">
+            <div class="badge-dot"></div> Активна
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="status-name"><span class="status-icon">👀</span> Мониторинг</div>
+          <div class="status-badge off" id="monStatus" onclick="toggleMonitoring()">
+            <div class="badge-dot"></div> Выкл
+          </div>
+        </div>
+        <div class="status-row">
+          <div class="status-name"><span class="status-icon">⏰</span> Планировщик</div>
+          <div class="status-badge off" id="schedStatus">
+            <div class="badge-dot"></div> Выкл
+          </div>
+        </div>
+      </div>
+
+      <!-- Channels -->
+      <div class="channel-card">
+        <div class="channel-title">🔀 Маршрут копирования</div>
+        <div class="channel-flow">
+          <div class="channel-box">
+            <div class="channel-type">Источник</div>
+            <div class="channel-name" id="srcDisplay">@anime_src</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="channel-box">
+            <div class="channel-type">Цель</div>
+            <div class="channel-name" id="tgtDisplay">@my_channel</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick actions -->
+      <div class="actions">
+        <button class="action-btn primary" onclick="quickCopy()">
+          <span class="action-emoji">📋</span>
+          Быстрое копирование
+        </button>
+        <button class="action-btn" onclick="toggleMonitoring()">
+          <span class="action-emoji" id="monEmoji">👁</span>
+          <span id="monText">Мониторинг</span>
+        </button>
+        <button class="action-btn success" id="schedBtn" onclick="switchTab('scheduler', document.querySelectorAll('.tab')[2])">
+          <span class="action-emoji">⏰</span>
+          Планировщик
+        </button>
+        <button class="action-btn danger" onclick="clearHistory()">
+          <span class="action-emoji">🗑</span>
+          Очистить историю
+        </button>
+      </div>
+
+      <!-- Logs -->
+      <div class="log-card">
+        <div class="log-header">
+          <div class="log-title">📡 Последние события</div>
+          <button class="log-clear" onclick="clearLogs()">очистить</button>
+        </div>
+        <div id="logsList">
+          <div class="log-item">
+            <div class="log-time">12:40</div>
+            <div class="log-msg info">Соединение установлено</div>
+          </div>
+          <div class="log-item">
+            <div class="log-time">12:41</div>
+            <div class="log-msg success">✓ Скопировано 5 постов</div>
+          </div>
+          <div class="log-item">
+            <div class="log-time">12:43</div>
+            <div class="log-msg warn">⚠ Пропущено 2 дубликата</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COPY -->
+    <div class="section" id="copy">
+
+      <!-- Быстрое копирование -->
+      <div class="copy-card">
+        <div class="copy-card-title">📋 Последние посты</div>
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Количество постов</div>
+          <div class="number-input">
+            <button class="num-btn" onclick="changeCount(-1)">−</button>
+            <div class="num-display" id="countDisplay">10</div>
+            <button class="num-btn" onclick="changeCount(1)">+</button>
+          </div>
+        </div>
+        <button class="big-btn accent" onclick="startCopyLast()">
+          ▶ Копировать
+        </button>
+        <div class="progress-wrap" id="copyProgress">
+          <div class="progress-label">
+            <span id="progressText">Копирую...</span>
+            <span id="progressPct">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Поиск по словам -->
+      <div class="copy-card">
+        <div class="copy-card-title">🔎 Поиск по ключевым словам</div>
+
+        <div class="tags-wrap" id="tagsList">
+          <div class="tag">#avatar <span class="tag-remove" onclick="removeTag(this)">×</span></div>
+          <div class="tag">#anime <span class="tag-remove" onclick="removeTag(this)">×</span></div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <input class="input-field" id="tagInput" placeholder="+ ключевое слово" style="margin:0;flex:1;"
+                 onkeydown="if(event.key==='Enter')addTag()">
+          <button class="big-btn outline" style="margin:0;width:auto;padding:0 14px;font-size:10px;" onclick="addTag()">Добавить</button>
+        </div>
+
+        <div class="number-input" style="margin-bottom:10px;">
+          <button class="num-btn" onclick="changeSearchCount(-5)">−</button>
+          <div style="flex:1;text-align:center;">
+            <div style="font-size:9px;color:var(--muted);">ИСКАТЬ</div>
+            <div class="num-display" id="searchCountDisplay" style="font-size:14px;">50</div>
+          </div>
+          <button class="num-btn" onclick="changeSearchCount(5)">+</button>
+        </div>
+
+        <button class="big-btn accent" onclick="startSearchCopy()">
+          🔍 Найти и скопировать
+        </button>
+
+        <div class="progress-wrap" id="searchProgress">
+          <div class="progress-label">
+            <span id="searchProgressText">Ищу...</span>
+            <span id="searchProgressPct">0%</span>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" id="searchProgressFill"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Настройки копирования -->
+      <div class="copy-card">
+        <div class="copy-card-title">⚙️ Параметры копирования</div>
+        <div class="settings-group" style="margin:0;border-radius:10px;">
+          <div class="setting-row" onclick="toggleSettingInline('media')">
+            <div class="setting-info">
+              <div class="setting-name">📸 Фото и Видео</div>
+            </div>
+            <div class="toggle on" id="toggle_media"></div>
+          </div>
+          <div class="setting-row" onclick="toggleSettingInline('caption')">
+            <div class="setting-info">
+              <div class="setting-name">📝 Текст поста</div>
+            </div>
+            <div class="toggle on" id="toggle_caption"></div>
+          </div>
+          <div class="setting-row" onclick="toggleSettingInline('links')">
+            <div class="setting-info">
+              <div class="setting-name">🔗 Ссылки boost/chat</div>
+            </div>
+            <div class="toggle off" id="toggle_links"></div>
+          </div>
+          <div class="setting-row" onclick="toggleSettingInline('avatar')">
+            <div class="setting-info">
+              <div class="setting-name">🖼 Аватарка канала</div>
+            </div>
+            <div class="toggle off" id="toggle_avatar"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCHEDULER -->
+    <div class="section" id="scheduler">
+
+      <div class="scheduler-timer">
+        <div class="timer-label">⏱ До следующего запуска</div>
+        <div class="timer-value" id="timerDisplay">--:--:--</div>
+        <div class="timer-sub" id="timerSub">Планировщик не запущен</div>
+      </div>
+
+      <div class="copy-card">
+        <div class="copy-card-title">🔧 Настройка расписания</div>
+
+        <div style="margin-bottom:12px;">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Ключевые слова</div>
+          <div class="tags-wrap" id="schedTagsList">
+            <div class="tag">#avatar <span class="tag-remove" onclick="removeSchedTag(this)">×</span></div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <input class="input-field" id="schedTagInput" placeholder="+ слово" style="margin:0;flex:1;"
+                   onkeydown="if(event.key==='Enter')addSchedTag()">
+            <button class="big-btn outline" style="margin:0;width:auto;padding:0 14px;font-size:10px;" onclick="addSchedTag()">+</button>
+          </div>
+        </div>
+
+        <div class="input-row" style="margin-bottom:12px;">
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Постов за раз</div>
+            <div class="number-input">
+              <button class="num-btn" onclick="changeSchedCount(-1)">−</button>
+              <div class="num-display" id="schedCountDisplay" style="font-size:14px;">10</div>
+              <button class="num-btn" onclick="changeSchedCount(1)">+</button>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Каждые (часов)</div>
+            <div class="number-input">
+              <button class="num-btn" onclick="changeSchedInterval(-1)">−</button>
+              <div class="num-display" id="schedIntervalDisplay" style="font-size:14px;">24</div>
+              <button class="num-btn" onclick="changeSchedInterval(1)">+</button>
+            </div>
+          </div>
+        </div>
+
+        <button class="big-btn accent" id="schedStartBtn" onclick="toggleScheduler()">
+          ▶ Запустить планировщик
+        </button>
+      </div>
+
+      <div class="log-card">
+        <div class="log-header">
+          <div class="log-title">📊 История планировщика</div>
+        </div>
+        <div id="schedLogs">
+          <div class="log-item">
+            <div class="log-time">вчера</div>
+            <div class="log-msg success">✓ Отправлено 10 постов</div>
+          </div>
+          <div class="log-item">
+            <div class="log-time">вчера</div>
+            <div class="log-msg info">Проверено 234 сообщений</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="section" id="settings">
+
+      <div class="settings-group">
+        <div class="group-title">📡 Каналы</div>
+        <div class="setting-row" onclick="editChannel('source')">
+          <div class="setting-info">
+            <div class="setting-name">Источник</div>
+            <div class="setting-desc" id="srcSetting">@anime_src</div>
+          </div>
+          <span style="color:var(--muted);font-size:16px;">›</span>
+        </div>
+        <div class="setting-row" onclick="editChannel('target')">
+          <div class="setting-info">
+            <div class="setting-name">Целевой канал</div>
+            <div class="setting-desc" id="tgtSetting">@my_channel</div>
+          </div>
+          <span style="color:var(--muted);font-size:16px;">›</span>
+        </div>
+        <div class="setting-row" onclick="editDelay()">
+          <div class="setting-info">
+            <div class="setting-name">Задержка между постами</div>
+            <div class="setting-desc" id="delaySetting">5 секунд</div>
+          </div>
+          <span style="color:var(--muted);font-size:16px;">›</span>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="group-title">📋 Что копировать</div>
+        <div class="setting-row" onclick="toggleSetting('media')">
+          <div class="setting-info">
+            <div class="setting-name">📸 Фото и Видео</div>
+            <div class="setting-desc">Копировать медиа-файлы</div>
+          </div>
+          <div class="toggle on" id="s_media"></div>
+        </div>
+        <div class="setting-row" onclick="toggleSetting('caption')">
+          <div class="setting-info">
+            <div class="setting-name">📝 Текст подписи</div>
+            <div class="setting-desc">Копировать текст поста</div>
+          </div>
+          <div class="toggle on" id="s_caption"></div>
+        </div>
+        <div class="setting-row" onclick="toggleSetting('avatar')">
+          <div class="setting-info">
+            <div class="setting-name">🖼 Аватарка канала</div>
+            <div class="setting-desc">Добавлять логотип источника</div>
+          </div>
+          <div class="toggle off" id="s_avatar"></div>
+        </div>
+        <div class="setting-row" onclick="toggleSetting('links')">
+          <div class="setting-info">
+            <div class="setting-name">🔗 Ссылки boost/chat</div>
+            <div class="setting-desc">Оставлять рекламные ссылки</div>
+          </div>
+          <div class="toggle off" id="s_links"></div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="group-title">📝 Подпись к постам</div>
+        <div class="setting-row" onclick="editFooter()">
+          <div class="setting-info">
+            <div class="setting-name">Текст внизу поста</div>
+            <div class="setting-desc" id="footerPreview">Не установлен</div>
+          </div>
+          <span style="color:var(--muted);font-size:16px;">›</span>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <div class="group-title">🚨 Опасная зона</div>
+        <div class="setting-row" onclick="clearHistory()" style="color:var(--danger);">
+          <div class="setting-info">
+            <div class="setting-name" style="color:var(--danger);">Очистить историю</div>
+            <div class="setting-desc">Удалить список отправленных постов</div>
+          </div>
+          <span style="color:var(--danger);font-size:16px;">›</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- .app -->
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+  // ===== STATE =====
+  const state = {
+    totalCopied: 142,
+    todayCopied: 18,
+    totalFound: 89,
+    totalSkipped: 23,
+    monitoring: false,
+    schedulerRunning: false,
+    copyCount: 10,
+    searchCount: 50,
+    schedCount: 10,
+    schedInterval: 24,
+    settings: {
+      media: true, caption: true, links: false, avatar: false
+    },
+    delay: 5,
+    source: '@anime_src',
+    target: '@my_channel',
+    footer: '',
+    timerInterval: null,
+    nextRun: null
+  };
+
+  // Telegram WebApp init
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    tg.expand();
+    tg.setHeaderColor('#0a0a0f');
+    tg.setBackgroundColor('#0a0a0f');
+  }
+
+  // ===== TABS =====
+  function switchTab(name, btn) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.getElementById(name).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  // ===== UPDATE UI =====
+  function updateStats() {
+    document.getElementById('totalCopied').textContent = state.totalCopied;
+    document.getElementById('todayCopied').textContent = state.todayCopied;
+    document.getElementById('totalFound').textContent = state.totalFound;
+    document.getElementById('totalSkipped').textContent = state.totalSkipped;
+  }
+
+  function animateNumber(el, target) {
+    let current = parseInt(el.textContent) || 0;
+    const step = Math.ceil((target - current) / 20);
+    const timer = setInterval(() => {
+      current = Math.min(current + step, target);
+      el.textContent = current;
+      if (current >= target) clearInterval(timer);
+    }, 30);
+  }
+
+  // ===== TOGGLE =====
+  function toggleSettingInline(key) {
+    state.settings[key] = !state.settings[key];
+    const el = document.getElementById('toggle_' + key);
+    el.classList.toggle('on', state.settings[key]);
+    el.classList.toggle('off', !state.settings[key]);
+    syncSettings();
+    showToast(state.settings[key] ? '✅ Включено' : '❌ Выключено', 'info');
+  }
+
+  function toggleSetting(key) {
+    state.settings[key] = !state.settings[key];
+    const el = document.getElementById('s_' + key);
+    el.classList.toggle('on', state.settings[key]);
+    el.classList.toggle('off', !state.settings[key]);
+    const el2 = document.getElementById('toggle_' + key);
+    if (el2) {
+      el2.classList.toggle('on', state.settings[key]);
+      el2.classList.toggle('off', !state.settings[key]);
+    }
+    showToast(state.settings[key] ? '✅ Включено' : '❌ Выключено', 'info');
+    sendToBot({ action: 'toggle_setting', key, value: state.settings[key] });
+  }
+
+  function syncSettings() {
+    Object.keys(state.settings).forEach(k => {
+      const el = document.getElementById('s_' + k);
+      if (el) {
+        el.classList.toggle('on', state.settings[k]);
+        el.classList.toggle('off', !state.settings[k]);
+      }
+    });
+  }
+
+  // ===== MONITORING =====
+  function toggleMonitoring() {
+    state.monitoring = !state.monitoring;
+    const badge = document.getElementById('monStatus');
+    const emoji = document.getElementById('monEmoji');
+    const text = document.getElementById('monText');
+
+    if (state.monitoring) {
+      badge.className = 'status-badge on';
+      badge.innerHTML = '<div class="badge-dot pulsing"></div> Работает';
+      emoji.textContent = '⏸';
+      text.textContent = 'Стоп';
+      addLog('success', '▶ Мониторинг запущен');
+      showToast('👀 Мониторинг запущен', 'success');
+    } else {
+      badge.className = 'status-badge off';
+      badge.innerHTML = '<div class="badge-dot"></div> Выкл';
+      emoji.textContent = '👁';
+      text.textContent = 'Мониторинг';
+      addLog('warn', '⏸ Мониторинг остановлен');
+      showToast('⏹ Мониторинг остановлен', 'info');
+    }
+    sendToBot({ action: state.monitoring ? 'start_monitoring' : 'stop_monitoring' });
+  }
+
+  // ===== COPY =====
+  let copyCount = 10;
+  function changeCount(d) {
+    copyCount = Math.max(1, Math.min(100, copyCount + d));
+    document.getElementById('countDisplay').textContent = copyCount;
+  }
+
+  let searchCount = 50;
+  function changeSearchCount(d) {
+    searchCount = Math.max(5, Math.min(1000, searchCount + d));
+    document.getElementById('searchCountDisplay').textContent = searchCount;
+  }
+
+  function startCopyLast() {
+    const progress = document.getElementById('copyProgress');
+    const fill = document.getElementById('progressFill');
+    const pct = document.getElementById('progressPct');
+    const txt = document.getElementById('progressText');
+
+    progress.classList.add('show');
+    fill.style.width = '0%';
+    let p = 0;
+
+    showToast(`📋 Копирую ${copyCount} постов...`, 'info');
+    addLog('info', `▶ Копирование ${copyCount} постов`);
+
+    const timer = setInterval(() => {
+      p += Math.random() * 8 + 2;
+      if (p >= 100) {
+        p = 100;
+        clearInterval(timer);
+        setTimeout(() => {
+          progress.classList.remove('show');
+          const added = Math.floor(copyCount * (0.7 + Math.random() * 0.3));
+          state.totalCopied += added;
+          state.todayCopied += added;
+          animateNumber(document.getElementById('totalCopied'), state.totalCopied);
+          animateNumber(document.getElementById('todayCopied'), state.todayCopied);
+          addLog('success', `✓ Скопировано ${added} из ${copyCount} постов`);
+          showToast(`✅ Скопировано ${added} постов!`, 'success');
+        }, 500);
+      }
+      fill.style.width = p + '%';
+      pct.textContent = Math.floor(p) + '%';
+      txt.textContent = `Копирую ${Math.floor(p * copyCount / 100)}/${copyCount}...`;
+    }, 120);
+
+    sendToBot({ action: 'copy_last', count: copyCount, settings: state.settings });
+  }
+
+  function startSearchCopy() {
+    const tags = [...document.querySelectorAll('#tagsList .tag')].map(t =>
+      t.textContent.replace('×','').trim()
+    );
+    if (!tags.length) { showToast('⚠️ Добавьте ключевые слова!', 'error'); return; }
+
+    const progress = document.getElementById('searchProgress');
+    const fill = document.getElementById('searchProgressFill');
+    const pct = document.getElementById('searchProgressPct');
+    const txt = document.getElementById('searchProgressText');
+
+    progress.classList.add('show');
+    fill.style.width = '0%';
+    let p = 0, checked = 0;
+
+    showToast(`🔍 Ищу посты...`, 'info');
+    addLog('info', `🔍 Поиск по: ${tags.join(', ')}`);
+
+    const timer = setInterval(() => {
+      p += Math.random() * 3 + 1;
+      checked += Math.floor(Math.random() * 50 + 20);
+      if (p >= 100) {
+        p = 100;
+        clearInterval(timer);
+        setTimeout(() => {
+          progress.classList.remove('show');
+          const found = Math.floor(searchCount * (0.5 + Math.random() * 0.4));
+          state.totalCopied += found;
+          state.totalFound += found;
+          state.totalSkipped += Math.floor(found * 0.2);
+          animateNumber(document.getElementById('totalCopied'), state.totalCopied);
+          animateNumber(document.getElementById('totalFound'), state.totalFound);
+          addLog('success', `✓ Найдено ${found}, проверено ${checked}`);
+          showToast(`✅ Найдено ${found} постов!`, 'success');
+        }, 500);
+      }
+      fill.style.width = p + '%';
+      pct.textContent = Math.floor(p) + '%';
+      txt.textContent = `Проверено ${checked} сообщений...`;
+    }, 200);
+
+    sendToBot({ action: 'copy_keywords', keywords: tags, count: searchCount, settings: state.settings });
+  }
+
+  // ===== TAGS =====
+  function addTag() {
+    const input = document.getElementById('tagInput');
+    const val = input.value.trim();
+    if (!val) return;
+    const tag = document.createElement('div');
+    tag.className = 'tag';
+    tag.innerHTML = `${val} <span class="tag-remove" onclick="removeTag(this)">×</span>`;
+    document.getElementById('tagsList').appendChild(tag);
+    input.value = '';
+    haptic();
+  }
+
+  function removeTag(el) {
+    el.parentElement.remove();
+    haptic();
+  }
+
+  function addSchedTag() {
+    const input = document.getElementById('schedTagInput');
+    const val = input.value.trim();
+    if (!val) return;
+    const tag = document.createElement('div');
+    tag.className = 'tag';
+    tag.innerHTML = `${val} <span class="tag-remove" onclick="removeSchedTag(this)">×</span>`;
+    document.getElementById('schedTagsList').appendChild(tag);
+    input.value = '';
+    haptic();
+  }
+
+  function removeSchedTag(el) {
+    el.parentElement.remove();
+    haptic();
+  }
+
+  // ===== SCHEDULER =====
+  let schedCount = 10;
+  let schedInterval = 24;
+
+  function changeSchedCount(d) {
+    schedCount = Math.max(1, Math.min(100, schedCount + d));
+    document.getElementById('schedCountDisplay').textContent = schedCount;
+  }
+
+  function changeSchedInterval(d) {
+    schedInterval = Math.max(1, Math.min(168, schedInterval + d));
+    document.getElementById('schedIntervalDisplay').textContent = schedInterval;
+  }
+
+  function toggleScheduler() {
+    state.schedulerRunning = !state.schedulerRunning;
+    const btn = document.getElementById('schedStartBtn');
+    const badge = document.getElementById('schedStatus');
+
+    if (state.schedulerRunning) {
+      const tags = [...document.querySelectorAll('#schedTagsList .tag')].map(t =>
+        t.textContent.replace('×','').trim()
+      );
+      if (!tags.length) {
+        showToast('⚠️ Добавьте ключевые слова!', 'error');
+        state.schedulerRunning = false;
+        return;
+      }
+
+      btn.textContent = '⏸ Остановить планировщик';
+      btn.style.background = 'linear-gradient(135deg, #374151, #1f2937)';
+      badge.className = 'status-badge on';
+      badge.innerHTML = '<div class="badge-dot pulsing"></div> Работает';
+
+      state.nextRun = Date.now() + schedInterval * 3600000;
+      startTimer();
+
+      addLog('success', `▶ Планировщик: ${schedCount} постов/${schedInterval}ч`);
+      showToast('⏰ Планировщик запущен!', 'success');
+      sendToBot({ action: 'start_scheduler', count: schedCount, interval: schedInterval, keywords: tags });
+    } else {
+      btn.textContent = '▶ Запустить планировщик';
+      btn.style.background = '';
+      badge.className = 'status-badge off';
+      badge.innerHTML = '<div class="badge-dot"></div> Выкл';
+
+      stopTimer();
+      document.getElementById('timerDisplay').textContent = '--:--:--';
+      document.getElementById('timerSub').textContent = 'Планировщик не запущен';
+      addLog('warn', '⏸ Планировщик остановлен');
+      showToast('⏹ Планировщик остановлен', 'info');
+      sendToBot({ action: 'stop_scheduler' });
+    }
+  }
+
+  function startTimer() {
+    updateTimer();
+    state.timerInterval = setInterval(updateTimer, 1000);
+  }
+
+  function stopTimer() {
+    clearInterval(state.timerInterval);
+  }
+
+  function updateTimer() {
+    if (!state.nextRun) return;
+    const remaining = Math.max(0, state.nextRun - Date.now());
+    const h = Math.floor(remaining / 3600000).toString().padStart(2, '0');
+    const m = Math.floor((remaining % 3600000) / 60000).toString().padStart(2, '0');
+    const s = Math.floor((remaining % 60000) / 1000).toString().padStart(2, '0');
+    document.getElementById('timerDisplay').textContent = `${h}:${m}:${s}`;
+    document.getElementById('timerSub').textContent =
+      `Следующий запуск: ${new Date(state.nextRun).toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'})}`;
+
+    if (remaining === 0) {
+      state.nextRun = Date.now() + schedInterval * 3600000;
+      addLog('success', `✓ Плановая отправка выполнена`);
+    }
+  }
+
+  // ===== SETTINGS EDIT =====
+  function editChannel(type) {
+    const current = type === 'source' ? state.source : state.target;
+    const label = type === 'source' ? 'Канал-источник' : 'Целевой канал';
+
+    if (tg) {
+      // В реальном боте используем popup
+      tg.showPopup({
+        title: label,
+        message: 'Введите @username или ID канала',
+        buttons: [
+          { id: 'cancel', type: 'cancel' },
+          { id: 'ok', type: 'default', text: 'OK' }
+        ]
+      });
+    } else {
+      const val = prompt(`${label}\nТекущий: ${current}`, current);
+      if (val) {
+        if (type === 'source') {
+          state.source = val;
+          document.getElementById('srcDisplay').textContent = val;
+          document.getElementById('srcSetting').textContent = val;
+        } else {
+          state.target = val;
+          document.getElementById('tgtDisplay').textContent = val;
+          document.getElementById('tgtSetting').textContent = val;
+        }
+        showToast('✅ Сохранено!', 'success');
+        sendToBot({ action: 'set_channel', type, value: val });
+      }
+    }
+  }
+
+  function editDelay() {
+    const val = prompt('Задержка в секундах (0-300):', state.delay);
+    if (val !== null) {
+      const d = parseInt(val);
+      if (!isNaN(d) && d >= 0 && d <= 300) {
+        state.delay = d;
+        document.getElementById('delaySetting').textContent = `${d} секунд`;
+        showToast('✅ Задержка сохранена!', 'success');
+        sendToBot({ action: 'set_delay', value: d });
+      }
+    }
+  }
+
+  function editFooter() {
+    const val = prompt('Текст в конце каждого поста:', state.footer);
+    if (val !== null) {
+      state.footer = val;
+      document.getElementById('footerPreview').textContent = val || 'Не установлен';
+      showToast('✅ Подпись сохранена!', 'success');
+      sendToBot({ action: 'set_footer', value: val });
+    }
+  }
+
+  // ===== LOGS =====
+  function addLog(type, msg) {
+    const list = document.getElementById('logsList');
+    const now = new Date();
+    const time = now.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+
+    const item = document.createElement('div');
+    item.className = 'log-item';
+    item.innerHTML = `<div class="log-time">${time}</div><div class="log-msg ${type}">${msg}</div>`;
+
+    list.insertBefore(item, list.firstChild);
+
+    // Лимит 20 записей
+    while (list.children.length > 20) list.removeChild(list.lastChild);
+  }
+
+  function clearLogs() {
+    document.getElementById('logsList').innerHTML =
+      '<div class="log-item"><div class="log-time">сейчас</div><div class="log-msg info">Лог очищен</div></div>';
+    haptic();
+  }
+
+  // ===== MISC =====
+  function clearHistory() {
+    if (!confirm('Очистить историю отправленных постов?')) return;
+    state.totalSkipped = 0;
+    animateNumber(document.getElementById('totalSkipped'), 0);
+    addLog('warn', '🗑 История очищена');
+    showToast('🗑 История очищена', 'info');
+    sendToBot({ action: 'clear_history' });
+  }
+
+  function quickCopy() {
+    switchTab('copy', document.querySelectorAll('.tab')[1]);
+    showToast('💡 Выберите режим копирования', 'info');
+  }
+
+  // ===== TOAST =====
+  function showToast(msg, type = 'info') {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = `toast ${type} show`;
+    setTimeout(() => t.classList.remove('show'), 2500);
+    haptic();
+  }
+
+  // ===== HAPTIC =====
+  function haptic(type = 'light') {
+    tg?.HapticFeedback?.impactOccurred(type);
+  }
+
+  // ===== SEND TO BOT =====
+  function sendToBot(data) {
+    if (tg?.sendData) {
+      try { tg.sendData(JSON.stringify(data)); } catch(e) {}
+    }
+    console.log('→ Bot:', data);
+  }
+
+  // ===== INIT =====
+  updateStats();
+  </script>
+  </body>
+  </html>
