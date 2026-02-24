@@ -1,1649 +1,955 @@
-  <!DOCTYPE html>
-  <html lang="ru">
-  <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>CopyBot Dashboard</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Unbounded:wght@300;400;700;900&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg: #0a0a0f;
-      --surface: #111118;
-      --card: #16161f;
-      --border: #1e1e2e;
-      --accent: #7c3aed;
-      --accent2: #06b6d4;
-      --accent3: #10b981;
-      --danger: #ef4444;
-      --warn: #f59e0b;
-      --text: #e2e8f0;
-      --muted: #64748b;
-      --glow: rgba(124, 58, 237, 0.3);
-    }
-
-    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-
-    body {
-      font-family: 'JetBrains Mono', monospace;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-
-    /* Фоновая сетка */
-    body::before {
-      content: '';
-      position: fixed;
-      inset: 0;
-      background-image:
-        linear-gradient(rgba(124,58,237,0.03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(124,58,237,0.03) 1px, transparent 1px);
-      background-size: 40px 40px;
-      pointer-events: none;
-      z-index: 0;
-    }
-
-    .app {
-      position: relative;
-      z-index: 1;
-      max-width: 430px;
-      margin: 0 auto;
-      padding: 0 0 100px;
-    }
-
-    /* ===== HEADER ===== */
-    .header {
-      padding: 20px 16px 16px;
-      background: linear-gradient(180deg, rgba(124,58,237,0.12) 0%, transparent 100%);
-      border-bottom: 1px solid var(--border);
-      position: sticky;
-      top: 0;
-      backdrop-filter: blur(20px);
-      z-index: 100;
-    }
-
-    .header-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 4px;
-    }
-
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .logo-icon {
-      width: 36px;
-      height: 36px;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      box-shadow: 0 0 20px var(--glow);
-    }
-
-    .logo-text {
-      font-family: 'Unbounded', sans-serif;
-      font-size: 16px;
-      font-weight: 700;
-      background: linear-gradient(135deg, #fff, var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .live-badge {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: rgba(16,185,129,0.1);
-      border: 1px solid rgba(16,185,129,0.3);
-      border-radius: 20px;
-      padding: 4px 10px;
-      font-size: 11px;
-      color: var(--accent3);
-      font-weight: 500;
-    }
-
-    .live-dot {
-      width: 6px;
-      height: 6px;
-      background: var(--accent3);
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.8); }
-    }
-
-    /* ===== TABS ===== */
-    .tabs {
-      display: flex;
-      padding: 12px 16px 0;
-      gap: 4px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-
-    .tabs::-webkit-scrollbar { display: none; }
-
-    .tab {
-      flex-shrink: 0;
-      padding: 8px 14px;
-      border-radius: 8px 8px 0 0;
-      font-size: 12px;
-      font-weight: 500;
-      color: var(--muted);
-      cursor: pointer;
-      transition: all 0.2s;
-      border: none;
-      background: transparent;
-      font-family: 'JetBrains Mono', monospace;
-    }
-
-    .tab.active {
-      background: var(--card);
-      color: var(--text);
-      border: 1px solid var(--border);
-      border-bottom: 1px solid var(--card);
-      position: relative;
-      top: 1px;
-    }
-
-    /* ===== SECTIONS ===== */
-    .section { display: none; padding: 16px; }
-    .section.active { display: block; }
-
-    /* ===== STATS GRID ===== */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 16px;
-    }
-
-    .stat-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 14px;
-      position: relative;
-      overflow: hidden;
-      animation: fadeUp 0.4s ease both;
-    }
-
-    .stat-card:nth-child(1) { animation-delay: 0.05s; }
-    .stat-card:nth-child(2) { animation-delay: 0.1s; }
-    .stat-card:nth-child(3) { animation-delay: 0.15s; }
-    .stat-card:nth-child(4) { animation-delay: 0.2s; }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(16px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .stat-card::after {
-      content: '';
-      position: absolute;
-      top: 0; right: 0;
-      width: 60px; height: 60px;
-      border-radius: 50%;
-      filter: blur(20px);
-      opacity: 0.15;
-    }
-
-    .stat-card.purple::after { background: var(--accent); }
-    .stat-card.cyan::after { background: var(--accent2); }
-    .stat-card.green::after { background: var(--accent3); }
-    .stat-card.amber::after { background: var(--warn); }
-
-    .stat-label {
-      font-size: 10px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 8px;
-    }
-
-    .stat-value {
-      font-family: 'Unbounded', sans-serif;
-      font-size: 24px;
-      font-weight: 700;
-      line-height: 1;
-      margin-bottom: 4px;
-    }
-
-    .stat-value.purple { color: var(--accent); }
-    .stat-value.cyan { color: var(--accent2); }
-    .stat-value.green { color: var(--accent3); }
-    .stat-value.amber { color: var(--warn); }
-
-    .stat-sub {
-      font-size: 10px;
-      color: var(--muted);
-    }
-
-    /* ===== STATUS CARD ===== */
-    .status-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      margin-bottom: 10px;
-      animation: fadeUp 0.4s ease 0.25s both;
-    }
-
-    .status-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border);
-    }
-
-    .status-row:last-child { border-bottom: none; padding-bottom: 0; }
-    .status-row:first-child { padding-top: 0; }
-
-    .status-name {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    .status-icon { font-size: 16px; }
-
-    .status-badge {
-      display: flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 11px;
-      font-weight: 500;
-      padding: 3px 10px;
-      border-radius: 20px;
-    }
-
-    .status-badge.on {
-      background: rgba(16,185,129,0.1);
-      color: var(--accent3);
-      border: 1px solid rgba(16,185,129,0.2);
-    }
-
-    .status-badge.off {
-      background: rgba(100,116,139,0.1);
-      color: var(--muted);
-      border: 1px solid rgba(100,116,139,0.2);
-    }
-
-    .status-badge.error {
-      background: rgba(239,68,68,0.1);
-      color: var(--danger);
-      border: 1px solid rgba(239,68,68,0.2);
-    }
-
-    .badge-dot {
-      width: 5px;
-      height: 5px;
-      border-radius: 50%;
-      background: currentColor;
-    }
-
-    .badge-dot.pulsing { animation: pulse 1.5s infinite; }
-
-    /* ===== CHANNEL CARD ===== */
-    .channel-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 14px 16px;
-      margin-bottom: 10px;
-      animation: fadeUp 0.4s ease 0.3s both;
-    }
-
-    .channel-title {
-      font-size: 10px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 12px;
-    }
-
-    .channel-flow {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .channel-box {
-      flex: 1;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
-    }
-
-    .channel-type {
-      font-size: 9px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 3px;
-    }
-
-    .channel-name {
-      font-size: 12px;
-      color: var(--text);
-      font-weight: 500;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .flow-arrow {
-      color: var(--accent);
-      font-size: 20px;
-      flex-shrink: 0;
-      animation: arrowPulse 2s ease infinite;
-    }
-
-    @keyframes arrowPulse {
-      0%, 100% { opacity: 0.4; transform: translateX(0); }
-      50% { opacity: 1; transform: translateX(3px); }
-    }
-
-    /* ===== ACTION BUTTONS ===== */
-    .actions {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 10px;
-      animation: fadeUp 0.4s ease 0.35s both;
-    }
-
-    .action-btn {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 14px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--text);
-      font-size: 11px;
-      text-align: center;
-      position: relative;
-      overflow: hidden;
-    }
-
-    .action-btn::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, transparent, rgba(124,58,237,0.05));
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-
-    .action-btn:active { transform: scale(0.96); }
-    .action-btn:active::before { opacity: 1; }
-
-    .action-btn.primary {
-      border-color: rgba(124,58,237,0.4);
-      background: linear-gradient(135deg, var(--card), rgba(124,58,237,0.08));
-    }
-
-    .action-btn.danger {
-      border-color: rgba(239,68,68,0.3);
-      background: linear-gradient(135deg, var(--card), rgba(239,68,68,0.05));
-      color: var(--danger);
-    }
-
-    .action-btn.success {
-      border-color: rgba(16,185,129,0.3);
-      background: linear-gradient(135deg, var(--card), rgba(16,185,129,0.05));
-      color: var(--accent3);
-    }
-
-    .action-emoji { font-size: 24px; }
-
-    /* ===== LOGS ===== */
-    .log-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 14px;
-      animation: fadeUp 0.4s ease 0.4s both;
-    }
-
-    .log-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-    }
-
-    .log-title {
-      font-size: 10px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-
-    .log-clear {
-      font-size: 10px;
-      color: var(--danger);
-      cursor: pointer;
-      background: none;
-      border: none;
-      font-family: 'JetBrains Mono', monospace;
-      opacity: 0.7;
-    }
-
-    .log-item {
-      display: flex;
-      gap: 10px;
-      padding: 7px 0;
-      border-bottom: 1px solid var(--border);
-      font-size: 11px;
-      align-items: flex-start;
-    }
-
-    .log-item:last-child { border-bottom: none; padding-bottom: 0; }
-
-    .log-time { color: var(--muted); flex-shrink: 0; font-size: 10px; padding-top: 1px; }
-    .log-msg { flex: 1; line-height: 1.5; }
-    .log-msg.success { color: var(--accent3); }
-    .log-msg.warn { color: var(--warn); }
-    .log-msg.error { color: var(--danger); }
-    .log-msg.info { color: var(--accent2); }
-
-    /* ===== SETTINGS ===== */
-    .settings-group {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      overflow: hidden;
-      margin-bottom: 12px;
-      animation: fadeUp 0.4s ease both;
-    }
-
-    .settings-group:nth-child(1) { animation-delay: 0.05s; }
-    .settings-group:nth-child(2) { animation-delay: 0.1s; }
-    .settings-group:nth-child(3) { animation-delay: 0.15s; }
-
-    .group-title {
-      padding: 10px 16px;
-      font-size: 9px;
-      color: var(--accent);
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      border-bottom: 1px solid var(--border);
-      background: rgba(124,58,237,0.05);
-    }
-
-    .setting-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 13px 16px;
-      border-bottom: 1px solid var(--border);
-      cursor: pointer;
-      transition: background 0.15s;
-    }
-
-    .setting-row:last-child { border-bottom: none; }
-    .setting-row:active { background: rgba(255,255,255,0.02); }
-
-    .setting-info { flex: 1; }
-    .setting-name { font-size: 13px; margin-bottom: 2px; }
-    .setting-desc { font-size: 10px; color: var(--muted); }
-
-    /* Toggle switch */
-    .toggle {
-      width: 44px;
-      height: 24px;
-      background: var(--border);
-      border-radius: 12px;
-      position: relative;
-      transition: background 0.3s;
-      flex-shrink: 0;
-      cursor: pointer;
-    }
-
-    .toggle.on { background: var(--accent); }
-
-    .toggle::after {
-      content: '';
-      position: absolute;
-      top: 2px; left: 2px;
-      width: 20px; height: 20px;
-      background: white;
-      border-radius: 50%;
-      transition: transform 0.3s;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-    }
-
-    .toggle.on::after { transform: translateX(20px); }
-
-    /* ===== COPY SECTION ===== */
-    .copy-card {
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 16px;
-      margin-bottom: 12px;
-      animation: fadeUp 0.4s ease both;
-    }
-
-    .copy-card:nth-child(1) { animation-delay: 0.05s; }
-    .copy-card:nth-child(2) { animation-delay: 0.1s; }
-    .copy-card:nth-child(3) { animation-delay: 0.15s; }
-
-    .copy-card-title {
-      font-size: 10px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 12px;
-    }
-
-    .input-field {
-      width: 100%;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 10px 12px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 13px;
-      color: var(--text);
-      outline: none;
-      transition: border-color 0.2s;
-      margin-bottom: 8px;
-    }
-
-    .input-field:focus { border-color: var(--accent); }
-    .input-field::placeholder { color: var(--muted); }
-
-    .input-row {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-    }
-
-    .big-btn {
-      width: 100%;
-      padding: 13px;
-      border-radius: 12px;
-      border: none;
-      font-family: 'Unbounded', sans-serif;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    .big-btn.accent {
-      background: linear-gradient(135deg, var(--accent), #5b21b6);
-      color: white;
-      box-shadow: 0 4px 20px rgba(124,58,237,0.3);
-    }
-
-    .big-btn.accent:active { transform: scale(0.97); box-shadow: none; }
-
-    .big-btn.outline {
-      background: transparent;
-      color: var(--accent2);
-      border: 1px solid rgba(6,182,212,0.3);
-    }
-
-    /* ===== PROGRESS BAR ===== */
-    .progress-wrap {
-      margin-top: 12px;
-      display: none;
-    }
-
-    .progress-wrap.show { display: block; }
-
-    .progress-label {
-      display: flex;
-      justify-content: space-between;
-      font-size: 10px;
-      color: var(--muted);
-      margin-bottom: 6px;
-    }
-
-    .progress-bar {
-      height: 4px;
-      background: var(--border);
-      border-radius: 2px;
-      overflow: hidden;
-    }
-
-    .progress-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--accent), var(--accent2));
-      border-radius: 2px;
-      transition: width 0.3s;
-      width: 0%;
-    }
-
-    /* ===== SCHEDULER ===== */
-    .scheduler-timer {
-      background: linear-gradient(135deg, rgba(124,58,237,0.1), rgba(6,182,212,0.05));
-      border: 1px solid rgba(124,58,237,0.2);
-      border-radius: 14px;
-      padding: 20px;
-      text-align: center;
-      margin-bottom: 12px;
-      animation: fadeUp 0.4s ease 0.05s both;
-    }
-
-    .timer-label {
-      font-size: 10px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      margin-bottom: 10px;
-    }
-
-    .timer-value {
-      font-family: 'Unbounded', sans-serif;
-      font-size: 36px;
-      font-weight: 900;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      letter-spacing: 0.05em;
-      margin-bottom: 6px;
-    }
-
-    .timer-sub {
-      font-size: 11px;
-      color: var(--muted);
-    }
-
-    /* ===== BOTTOM NAV ===== */
-    .bottom-nav {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      background: var(--surface);
-      border-top: 1px solid var(--border);
-      display: flex;
-      padding: 8px 0 calc(8px + env(safe-area-inset-bottom));
-      backdrop-filter: blur(20px);
-      z-index: 200;
-      max-width: 430px;
-      margin: 0 auto;
-    }
-
-    .nav-item {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 3px;
-      cursor: pointer;
-      padding: 4px 0;
-      transition: all 0.2s;
-    }
-
-    .nav-icon { font-size: 22px; }
-
-    .nav-label {
-      font-size: 9px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      transition: color 0.2s;
-    }
-
-    .nav-item.active .nav-label { color: var(--accent); }
-    .nav-item.active .nav-icon { filter: drop-shadow(0 0 8px var(--accent)); }
-
-    /* ===== TOAST ===== */
-    .toast {
-      position: fixed;
-      top: 80px;
-      left: 50%;
-      transform: translateX(-50%) translateY(-20px);
-      background: var(--card);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 10px 18px;
-      font-size: 12px;
-      opacity: 0;
-      transition: all 0.3s;
-      z-index: 999;
-      white-space: nowrap;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
-    }
-
-    .toast.show {
-      opacity: 1;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    .toast.success { border-color: rgba(16,185,129,0.4); color: var(--accent3); }
-    .toast.error { border-color: rgba(239,68,68,0.4); color: var(--danger); }
-    .toast.info { border-color: rgba(6,182,212,0.4); color: var(--accent2); }
-
-    /* ===== TAG FILTER ===== */
-    .tags-wrap {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-bottom: 8px;
-    }
-
-    .tag {
-      background: rgba(124,58,237,0.12);
-      border: 1px solid rgba(124,58,237,0.25);
-      border-radius: 6px;
-      padding: 4px 10px;
-      font-size: 11px;
-      color: var(--accent);
-      display: flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .tag-remove {
-      cursor: pointer;
-      opacity: 0.6;
-      transition: opacity 0.2s;
-    }
-
-    .tag-remove:hover { opacity: 1; }
-
-    /* Числовой ввод */
-    .number-input {
-      display: flex;
-      align-items: center;
-      gap: 0;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      overflow: hidden;
-    }
-
-    .num-btn {
-      width: 40px;
-      height: 40px;
-      background: var(--border);
-      border: none;
-      color: var(--text);
-      font-size: 20px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.15s;
-      font-family: monospace;
-      flex-shrink: 0;
-    }
-
-    .num-btn:active { background: var(--accent); }
-
-    .num-display {
-      flex: 1;
-      text-align: center;
-      font-family: 'Unbounded', sans-serif;
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--text);
-      background: transparent;
-      border: none;
-      outline: none;
-    }
-  </style>
-  </head>
-  <body>
-  <div class="app">
-    <!-- HEADER -->
-    <div class="header">
-      <div class="header-top">
-        <div class="logo">
-          <div class="logo-icon">⚡</div>
-          <div class="logo-text">CopyBot</div>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TG Store</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #070b0f;
+  --surface: #0c1219;
+  --card: #101820;
+  --card2: #131f2b;
+  --border: #1a2d40;
+  --border2: #243548;
+  --accent: #1a6eff;
+  --accent2: #00c8ff;
+  --accent3: #0047cc;
+  --text: #dde8f0;
+  --muted: #4a6a85;
+  --muted2: #7a9ab5;
+  --success: #00e676;
+  --danger: #ff3d57;
+  --warning: #ffaa00;
+  --mono: 'Space Mono', monospace;
+  --sans: 'Syne', sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
+
+/* GRID BG */
+body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(26,110,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(26,110,255,.03) 1px,transparent 1px);background-size:50px 50px;pointer-events:none;z-index:0}
+
+/* ====== UTILS ====== */
+.z1{position:relative;z-index:1}
+.hidden{display:none!important}
+.fade{animation:fadeUp .5s ease both}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ====== BUTTONS ====== */
+.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 22px;border-radius:7px;font-family:var(--mono);font-size:13px;font-weight:700;cursor:pointer;border:none;text-decoration:none;transition:all .2s;white-space:nowrap}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 0 20px rgba(26,110,255,.35)}
+.btn-primary:hover{background:#2d84ff;box-shadow:0 0 30px rgba(45,132,255,.5);transform:translateY(-1px)}
+.btn-outline{background:transparent;color:var(--accent2);border:1px solid var(--border2)}
+.btn-outline:hover{border-color:var(--accent);background:rgba(26,110,255,.08);transform:translateY(-1px)}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{opacity:.85}
+.btn-success{background:#00a854;color:#fff}
+.btn-success:hover{background:#00c264}
+.btn-sm{padding:7px 14px;font-size:11px}
+.btn-xs{padding:5px 10px;font-size:10px}
+.btn-ghost{background:transparent;color:var(--muted2);border:1px solid var(--border)}
+.btn-ghost:hover{border-color:var(--border2);color:var(--text)}
+
+/* ====== NAV ====== */
+#nav{position:fixed;top:0;left:0;right:0;z-index:200;display:flex;align-items:center;justify-content:space-between;padding:16px 40px;background:rgba(7,11,15,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.logo{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--accent2);letter-spacing:-0.5px;cursor:pointer}
+.logo b{color:var(--accent)}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{color:var(--muted2);text-decoration:none;font-size:14px;font-weight:600;transition:color .2s;letter-spacing:.3px}
+.nav-links a:hover,.nav-links a.active{color:var(--text)}
+.nav-right{display:flex;gap:10px;align-items:center}
+#adminToggle{font-family:var(--mono);font-size:11px}
+
+/* ====== PAGES ====== */
+.page{display:none;padding-top:72px;min-height:100vh}
+.page.active{display:block}
+
+/* ====== HERO ====== */
+.hero{position:relative;z-index:1;min-height:90vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 24px 60px}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;padding:6px 16px;border:1px solid var(--border2);border-radius:100px;font-family:var(--mono);font-size:11px;color:var(--accent2);margin-bottom:28px;background:rgba(0,200,255,.05)}
+.hero-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--success);box-shadow:0 0 8px var(--success);animation:pulse 2s infinite}
+.hero h1{font-size:clamp(44px,8vw,92px);font-weight:800;line-height:.95;letter-spacing:-3px;margin-bottom:20px}
+.hero h1 em{font-style:normal;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{font-size:17px;color:var(--muted2);max-width:500px;line-height:1.65;margin-bottom:36px}
+.hero-cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.orb{position:absolute;border-radius:50%;filter:blur(90px);pointer-events:none}
+.orb1{width:450px;height:450px;background:rgba(26,110,255,.1);top:5%;left:-15%;animation:float 9s ease-in-out infinite}
+.orb2{width:320px;height:320px;background:rgba(0,200,255,.07);bottom:5%;right:-8%;animation:float 11s ease-in-out infinite reverse}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-25px)}}
+
+/* ====== STATS BAR ====== */
+.stats-bar{position:relative;z-index:1;display:flex;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:rgba(12,18,25,.7);backdrop-filter:blur(10px)}
+.stat-item{flex:1;padding:28px 20px;text-align:center;border-right:1px solid var(--border)}
+.stat-item:last-child{border-right:none}
+.stat-n{font-family:var(--mono);font-size:32px;font-weight:700;color:var(--accent2);display:block}
+.stat-l{font-size:12px;color:var(--muted);margin-top:4px;letter-spacing:.5px}
+
+/* ====== SECTION ====== */
+.section{position:relative;z-index:1;max-width:1160px;margin:0 auto;padding:80px 40px}
+.section-tag{font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:3px;text-transform:uppercase;margin-bottom:10px}
+.section h2{font-size:clamp(30px,4vw,50px);font-weight:800;letter-spacing:-1.5px;line-height:1.05;margin-bottom:40px}
+
+/* ====== CATALOG ====== */
+#catalogGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1px;background:var(--border);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.prod-card{background:var(--card);padding:28px;transition:background .2s;position:relative;overflow:hidden;cursor:default}
+.prod-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));transform:scaleX(0);transform-origin:left;transition:transform .3s}
+.prod-card:hover{background:var(--card2)}
+.prod-card:hover::before{transform:scaleX(1)}
+.prod-type{font-family:var(--mono);font-size:10px;letter-spacing:2px;color:var(--accent);text-transform:uppercase;margin-bottom:10px}
+.prod-name{font-size:20px;font-weight:800;letter-spacing:-.5px;margin-bottom:8px}
+.prod-desc{font-size:13px;color:var(--muted2);line-height:1.6;margin-bottom:18px}
+.prod-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px}
+.prod-tag{padding:3px 9px;border-radius:4px;font-family:var(--mono);font-size:10px;background:rgba(26,110,255,.1);color:var(--accent2);border:1px solid rgba(26,110,255,.2)}
+.prod-footer{display:flex;align-items:center;justify-content:space-between}
+.prod-price{font-family:var(--mono);font-size:24px;font-weight:700;color:var(--text)}
+.prod-price span{font-size:13px;color:var(--muted);font-weight:400}
+.prod-stock{font-family:var(--mono);font-size:11px;padding:3px 9px;border-radius:4px}
+.stock-ok{background:rgba(0,230,118,.1);color:var(--success);border:1px solid rgba(0,230,118,.2)}
+.stock-low{background:rgba(255,170,0,.1);color:var(--warning);border:1px solid rgba(255,170,0,.2)}
+.stock-out{background:rgba(255,61,87,.1);color:var(--danger);border:1px solid rgba(255,61,87,.2)}
+.empty-catalog{text-align:center;padding:80px 20px;color:var(--muted)}
+.empty-catalog .e-icon{font-size:48px;margin-bottom:16px}
+
+/* ====== REVIEWS ====== */
+.reviews-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.rev-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:22px;transition:border-color .2s,transform .2s}
+.rev-card:hover{border-color:var(--accent);transform:translateY(-2px)}
+.rev-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.rev-av{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:#fff;flex-shrink:0}
+.rev-name{font-weight:700;font-size:14px}
+.rev-meta{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.rev-stars{color:#ffd600;font-size:13px;margin-bottom:10px}
+.rev-text{font-size:13px;color:var(--muted2);line-height:1.6}
+
+/* ====== FAQ ====== */
+.faq-wrap{border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;gap:1px;background:var(--border)}
+.faq-item{background:var(--card)}
+.faq-btn{width:100%;background:none;border:none;color:var(--text);font-family:var(--sans);font-size:15px;font-weight:700;text-align:left;padding:22px 28px;cursor:pointer;display:flex;justify-content:space-between;align-items:center;transition:background .2s;letter-spacing:-.3px}
+.faq-btn:hover{background:var(--card2)}
+.faq-icon{font-size:18px;color:var(--accent);transition:transform .3s;flex-shrink:0;margin-left:12px}
+.faq-item.open .faq-icon{transform:rotate(45deg)}
+.faq-body{max-height:0;overflow:hidden;transition:max-height .3s ease}
+.faq-item.open .faq-body{max-height:200px}
+.faq-inner{padding:0 28px 20px;font-size:14px;color:var(--muted2);line-height:1.7}
+
+/* ====== CTA ====== */
+.cta-block{position:relative;z-index:1;text-align:center;padding:80px 24px;border-top:1px solid var(--border);background:linear-gradient(180deg,transparent,rgba(26,110,255,.04),transparent)}
+.cta-block h2{margin-bottom:14px}
+.cta-block p{color:var(--muted2);font-size:16px;max-width:460px;margin:0 auto 32px;line-height:1.6}
+.cta-btns{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+
+/* ====== FOOTER ====== */
+footer{position:relative;z-index:1;text-align:center;padding:28px;font-family:var(--mono);font-size:11px;color:var(--muted);border-top:1px solid var(--border)}
+
+/* ==============================
+   ADMIN PAGE
+   ============================== */
+#adminPage{background:var(--bg)}
+.admin-layout{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 72px)}
+.admin-sidebar{background:var(--surface);border-right:1px solid var(--border);padding:24px 0;position:sticky;top:72px;height:calc(100vh - 72px);overflow-y:auto}
+.sidebar-label{font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:3px;padding:0 20px;margin-bottom:8px;margin-top:16px}
+.sidebar-label:first-child{margin-top:0}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;color:var(--muted2);font-size:14px;font-weight:600;transition:all .2s;border-left:2px solid transparent}
+.sidebar-item:hover{background:rgba(26,110,255,.07);color:var(--text)}
+.sidebar-item.active{background:rgba(26,110,255,.12);color:var(--accent2);border-left-color:var(--accent)}
+.sidebar-item .s-icon{font-size:16px;width:20px;text-align:center}
+.admin-content{padding:32px 40px;overflow-y:auto}
+.admin-title{font-size:26px;font-weight:800;letter-spacing:-1px;margin-bottom:6px}
+.admin-sub{font-size:14px;color:var(--muted2);margin-bottom:32px}
+
+/* ADMIN: STATS CARDS */
+.admin-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:32px}
+.a-stat{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px}
+.a-stat-n{font-family:var(--mono);font-size:28px;font-weight:700;color:var(--accent2)}
+.a-stat-l{font-size:12px;color:var(--muted);margin-top:4px}
+
+/* ADMIN: TABLE */
+.admin-table-wrap{background:var(--card);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.admin-table-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
+.admin-table-title{font-size:15px;font-weight:700}
+.table{width:100%;border-collapse:collapse}
+.table th{padding:12px 16px;text-align:left;font-family:var(--mono);font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;background:var(--surface);border-bottom:1px solid var(--border)}
+.table td{padding:14px 16px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+.table tr:last-child td{border-bottom:none}
+.table tr:hover td{background:rgba(26,110,255,.04)}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:4px;font-family:var(--mono);font-size:10px;font-weight:700}
+.badge-ok{background:rgba(0,230,118,.12);color:var(--success)}
+.badge-warn{background:rgba(255,170,0,.12);color:var(--warning)}
+.badge-danger{background:rgba(255,61,87,.12);color:var(--danger)}
+
+/* ADMIN: MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:500;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-overlay.hidden{display:none}
+.modal{background:var(--surface);border:1px solid var(--border2);border-radius:14px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;padding:32px}
+.modal-title{font-size:20px;font-weight:800;letter-spacing:-.5px;margin-bottom:4px}
+.modal-sub{font-size:13px;color:var(--muted2);margin-bottom:24px}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--muted2);font-size:22px;cursor:pointer;line-height:1;padding:4px 8px;border-radius:6px}
+.modal-close:hover{color:var(--text);background:var(--border)}
+
+/* ADMIN: FORMS */
+.form-group{margin-bottom:18px}
+.form-label{display:block;font-family:var(--mono);font-size:11px;color:var(--muted2);letter-spacing:1px;margin-bottom:8px;text-transform:uppercase}
+.form-input,.form-select,.form-textarea{width:100%;background:var(--card);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--sans);font-size:14px;padding:11px 14px;outline:none;transition:border-color .2s}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent)}
+.form-select{cursor:pointer}
+.form-textarea{resize:vertical;min-height:80px;line-height:1.5}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.form-hint{font-size:11px;color:var(--muted);margin-top:6px;font-family:var(--mono)}
+
+/* Upload zone */
+.upload-zone{border:2px dashed var(--border2);border-radius:10px;padding:32px;text-align:center;cursor:pointer;transition:all .2s;background:rgba(26,110,255,.02)}
+.upload-zone:hover,.upload-zone.dragover{border-color:var(--accent);background:rgba(26,110,255,.07)}
+.upload-zone input{display:none}
+.upload-icon{font-size:36px;margin-bottom:10px}
+.upload-text{font-size:14px;font-weight:600;margin-bottom:4px}
+.upload-sub{font-size:12px;color:var(--muted)}
+.uploaded-files{margin-top:14px;display:flex;flex-direction:column;gap:6px}
+.uploaded-file{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:12px;font-family:var(--mono)}
+.uf-name{color:var(--accent2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:260px}
+.uf-size{color:var(--muted);margin-left:8px;flex-shrink:0}
+.uf-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:0 4px}
+.uf-del:hover{color:var(--danger)}
+
+/* Form actions */
+.form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+
+/* Admin: Products List */
+.prod-list{display:flex;flex-direction:column;gap:10px}
+.prod-row{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 22px;display:flex;align-items:center;gap:16px;transition:border-color .2s}
+.prod-row:hover{border-color:var(--border2)}
+.prod-row-info{flex:1;min-width:0}
+.prod-row-name{font-size:15px;font-weight:700;letter-spacing:-.3px;margin-bottom:2px}
+.prod-row-meta{font-size:12px;color:var(--muted2);font-family:var(--mono)}
+.prod-row-actions{display:flex;gap:8px;align-items:center;flex-shrink:0}
+.prod-row-price{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent2);margin-right:8px}
+
+/* Toggle switch */
+.toggle{position:relative;display:inline-block;width:40px;height:22px;cursor:pointer}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--border2);border-radius:22px;transition:.3s}
+.toggle-slider::before{content:'';position:absolute;height:16px;width:16px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.3s}
+.toggle input:checked+.toggle-slider{background:var(--accent)}
+.toggle input:checked+.toggle-slider::before{transform:translateX(18px)}
+
+/* Login */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:40px;width:100%;max-width:380px}
+.login-logo{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--accent2);text-align:center;margin-bottom:8px}
+.login-sub{text-align:center;color:var(--muted2);font-size:13px;margin-bottom:28px}
+.login-err{background:rgba(255,61,87,.1);border:1px solid rgba(255,61,87,.3);border-radius:7px;padding:10px 14px;font-size:13px;color:var(--danger);margin-bottom:16px}
+
+/* Notification */
+.notif{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.notif-item{background:var(--surface);border:1px solid var(--border2);border-radius:9px;padding:12px 18px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.4);pointer-events:auto;animation:slideIn .3s ease;max-width:300px}
+.notif-item.ok{border-left:3px solid var(--success);color:var(--success)}
+.notif-item.err{border-left:3px solid var(--danger);color:var(--danger)}
+@keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+
+/* Password protect shown state */
+#loginScreen{display:none}
+#loginScreen.active{display:flex}
+
+@media(max-width:900px){
+  .admin-layout{grid-template-columns:1fr}
+  .admin-sidebar{position:relative;height:auto;display:flex;flex-wrap:wrap;gap:4px;padding:12px}
+  .sidebar-label{display:none}
+  .sidebar-item{border-left:none;border-radius:6px;padding:8px 12px;flex:1;min-width:120px;justify-content:center}
+  .admin-content{padding:20px}
+  .admin-stats{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:640px){
+  #nav{padding:14px 16px}
+  .nav-links{display:none}
+  .hero h1{letter-spacing:-2px}
+  .section{padding:60px 20px}
+  .admin-stats{grid-template-columns:1fr 1fr}
+  .form-row{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav id="nav" class="z1">
+  <div class="logo" onclick="goPage('home')">TG<b>_</b>STORE</div>
+  <div class="nav-links">
+    <a href="#" onclick="goSection('catalog')">Каталог</a>
+    <a href="#" onclick="goSection('reviews')">Отзывы</a>
+    <a href="#" onclick="goSection('faq')">FAQ</a>
+    <a href="#" onclick="goSection('contact')">Контакты</a>
+  </div>
+  <div class="nav-right">
+    <button class="btn btn-ghost btn-sm" id="adminToggle" onclick="goPage('admin')">⚙ Админ</button>
+    <a href="https://t.me/yourusername" target="_blank" class="btn btn-primary btn-sm">✈ Написать</a>
+  </div>
+</nav>
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notifContainer"></div>
+
+<!-- ==================== HOME PAGE ==================== -->
+<div class="page active" id="homePage">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="hero-badge"><span class="dot"></span> Аккаунты в наличии</div>
+    <h1>Telegram<br><em>аккаунты</em><br>оптом</h1>
+    <p>Качественные аккаунты на виртуальных номерах. Быстрая выдача, гарантия замены, честные цены.</p>
+    <div class="hero-cta">
+      <a href="#catalog" class="btn btn-primary" onclick="goSection('catalog')">📦 Смотреть каталог</a>
+      <a href="https://t.me/yourusername" target="_blank" class="btn btn-outline">✈ Написать</a>
+    </div>
+  </div>
+
+  <!-- STATS -->
+  <div class="stats-bar z1">
+    <div class="stat-item"><span class="stat-n" id="statSold">0</span><span class="stat-l">Продано аккаунтов</span></div>
+    <div class="stat-item"><span class="stat-n">24/7</span><span class="stat-l">Поддержка</span></div>
+    <div class="stat-item"><span class="stat-n">100%</span><span class="stat-l">Гарантия замены</span></div>
+    <div class="stat-item"><span class="stat-n">≈5 мин</span><span class="stat-l">Выдача</span></div>
+  </div>
+
+  <!-- CATALOG -->
+  <div class="section" id="catalog">
+    <div class="section-tag">// каталог</div>
+    <h2>Выбери<br>свой пакет</h2>
+    <div id="catalogGrid"></div>
+  </div>
+
+  <!-- REVIEWS -->
+  <div id="reviews" style="position:relative;z-index:1;background:rgba(12,18,25,.5);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:80px 40px">
+    <div style="max-width:1160px;margin:0 auto">
+      <div class="section-tag">// отзывы</div>
+      <h2>Что говорят<br>покупатели</h2>
+      <div class="reviews-grid">
+        <div class="rev-card">
+          <div class="rev-head"><div class="rev-av" style="background:linear-gradient(135deg,#1a6eff,#00c8ff)">A</div><div><div class="rev-name">Alexey_99</div><div class="rev-meta">Lolz.live · 3 дня назад</div></div></div>
+          <div class="rev-stars">★★★★★</div>
+          <div class="rev-text">Взял 12 штук на тест — всё чисто, выдали быстро. Буду брать ещё. Продавец адекватный.</div>
         </div>
-        <div class="live-badge" id="liveBadge">
-          <div class="live-dot"></div>
-          <span>ONLINE</span>
+        <div class="rev-card">
+          <div class="rev-head"><div class="rev-av" style="background:linear-gradient(135deg,#7c3aed,#2d84ff)">M</div><div><div class="rev-name">max_arb</div><div class="rev-meta">Lolz.live · 1 неделю назад</div></div></div>
+          <div class="rev-stars">★★★★★</div>
+          <div class="rev-text">Брал оптом 50 шт. Качество норм для цены, замену сделали без проблем. Рекомендую.</div>
+        </div>
+        <div class="rev-card">
+          <div class="rev-head"><div class="rev-av" style="background:linear-gradient(135deg,#00a854,#00c8ff)">K</div><div><div class="rev-name">k1ng_tg</div><div class="rev-meta">Telegram · 5 дней назад</div></div></div>
+          <div class="rev-stars">★★★★☆</div>
+          <div class="rev-text">Всё как описано. Цены хорошие, выдача быстрая. Продавец честный — это главное.</div>
         </div>
       </div>
     </div>
+  </div>
 
-    <!-- TABS -->
-    <div class="tabs">
-      <button class="tab active" onclick="switchTab('dashboard', this)">Главная</button>
-      <button class="tab" onclick="switchTab('copy', this)">Копировать</button>
-      <button class="tab" onclick="switchTab('scheduler', this)">Планировщик</button>
-      <button class="tab" onclick="switchTab('settings', this)">Настройки</button>
-    </div>
-
-    <!-- DASHBOARD -->
-    <div class="section active" id="dashboard">
-
-      <!-- Stats -->
-      <div class="stats-grid">
-        <div class="stat-card purple">
-          <div class="stat-label">Скопировано</div>
-          <div class="stat-value purple" id="totalCopied">0</div>
-          <div class="stat-sub">всего постов</div>
-        </div>
-        <div class="stat-card cyan">
-          <div class="stat-label">Сегодня</div>
-          <div class="stat-value cyan" id="todayCopied">0</div>
-          <div class="stat-sub">за 24 часа</div>
-        </div>
-        <div class="stat-card green">
-          <div class="stat-label">Найдено</div>
-          <div class="stat-value green" id="totalFound">0</div>
-          <div class="stat-sub">по ключевым</div>
-        </div>
-        <div class="stat-card amber">
-          <div class="stat-label">Пропущено</div>
-          <div class="stat-value amber" id="totalSkipped">0</div>
-          <div class="stat-sub">дубликатов</div>
-        </div>
+  <!-- FAQ -->
+  <div class="section" id="faq">
+    <div class="section-tag">// вопросы</div>
+    <h2>Часто<br>спрашивают</h2>
+    <div class="faq-wrap">
+      <div class="faq-item">
+        <button class="faq-btn" onclick="toggleFaq(this)">Как происходит выдача? <span class="faq-icon">+</span></button>
+        <div class="faq-body"><div class="faq-inner">После оплаты высылаю данные в Telegram в течение 5–15 минут. Работаю без выходных.</div></div>
       </div>
-
-      <!-- Status -->
-      <div class="status-card">
-        <div class="status-row">
-          <div class="status-name"><span class="status-icon">🔐</span> Авторизация</div>
-          <div class="status-badge on" id="authStatus">
-            <div class="badge-dot"></div> Активна
-          </div>
-        </div>
-        <div class="status-row">
-          <div class="status-name"><span class="status-icon">👀</span> Мониторинг</div>
-          <div class="status-badge off" id="monStatus" onclick="toggleMonitoring()">
-            <div class="badge-dot"></div> Выкл
-          </div>
-        </div>
-        <div class="status-row">
-          <div class="status-name"><span class="status-icon">⏰</span> Планировщик</div>
-          <div class="status-badge off" id="schedStatus">
-            <div class="badge-dot"></div> Выкл
-          </div>
-        </div>
+      <div class="faq-item">
+        <button class="faq-btn" onclick="toggleFaq(this)">Есть ли гарантия если аккаунт забанят? <span class="faq-icon">+</span></button>
+        <div class="faq-body"><div class="faq-inner">Да, гарантия 24 часа с момента выдачи. Если аккаунт забанили без нарушений — заменю.</div></div>
       </div>
-
-      <!-- Channels -->
-      <div class="channel-card">
-        <div class="channel-title">🔀 Маршрут копирования</div>
-        <div class="channel-flow">
-          <div class="channel-box">
-            <div class="channel-type">Источник</div>
-            <div class="channel-name" id="srcDisplay">@anime_src</div>
-          </div>
-          <div class="flow-arrow">→</div>
-          <div class="channel-box">
-            <div class="channel-type">Цель</div>
-            <div class="channel-name" id="tgtDisplay">@my_channel</div>
-          </div>
-        </div>
+      <div class="faq-item">
+        <button class="faq-btn" onclick="toggleFaq(this)">Какие способы оплаты? <span class="faq-icon">+</span></button>
+        <div class="faq-body"><div class="faq-inner">USDT (TRC20), BTC, СБП. Уточняйте актуальные способы в Telegram.</div></div>
       </div>
-
-      <!-- Quick actions -->
-      <div class="actions">
-        <button class="action-btn primary" onclick="quickCopy()">
-          <span class="action-emoji">📋</span>
-          Быстрое копирование
-        </button>
-        <button class="action-btn" onclick="toggleMonitoring()">
-          <span class="action-emoji" id="monEmoji">👁</span>
-          <span id="monText">Мониторинг</span>
-        </button>
-        <button class="action-btn success" id="schedBtn" onclick="switchTab('scheduler', document.querySelectorAll('.tab')[2])">
-          <span class="action-emoji">⏰</span>
-          Планировщик
-        </button>
-        <button class="action-btn danger" onclick="clearHistory()">
-          <span class="action-emoji">🗑</span>
-          Очистить историю
-        </button>
+      <div class="faq-item">
+        <button class="faq-btn" onclick="toggleFaq(this)">Можно ли купить оптом? <span class="faq-icon">+</span></button>
+        <div class="faq-body"><div class="faq-inner">Да. От 50 штук скидка. Чем больше объём — тем лучше цена. Напишите в Telegram.</div></div>
       </div>
-
-      <!-- Logs -->
-      <div class="log-card">
-        <div class="log-header">
-          <div class="log-title">📡 Последние события</div>
-          <button class="log-clear" onclick="clearLogs()">очистить</button>
-        </div>
-        <div id="logsList">
-          <div class="log-item">
-            <div class="log-time">12:40</div>
-            <div class="log-msg info">Соединение установлено</div>
-          </div>
-          <div class="log-item">
-            <div class="log-time">12:41</div>
-            <div class="log-msg success">✓ Скопировано 5 постов</div>
-          </div>
-          <div class="log-item">
-            <div class="log-time">12:43</div>
-            <div class="log-msg warn">⚠ Пропущено 2 дубликата</div>
-          </div>
-        </div>
+      <div class="faq-item">
+        <button class="faq-btn" onclick="toggleFaq(this)">На какие номера зарегистрированы аккаунты? <span class="faq-icon">+</span></button>
+        <div class="faq-body"><div class="faq-inner">На виртуальные номера разных стран. Уточняйте доступные страны при заказе.</div></div>
       </div>
     </div>
+  </div>
 
-    <!-- COPY -->
-    <div class="section" id="copy">
+  <!-- CTA -->
+  <div class="cta-block" id="contact">
+    <div class="section-tag" style="margin-bottom:10px">// контакты</div>
+    <h2 style="max-width:500px;margin:0 auto 14px">Готов купить?</h2>
+    <p>Пишите в Telegram — отвечу быстро, помогу подобрать нужный пакет.</p>
+    <div class="cta-btns">
+      <a href="https://t.me/yourusername" target="_blank" class="btn btn-primary" style="padding:14px 32px;font-size:15px">✈ Написать в Telegram</a>
+      <a href="https://lolz.live/yourusername" target="_blank" class="btn btn-outline" style="padding:14px 32px;font-size:15px">Lolz.live профиль</a>
+    </div>
+  </div>
 
-      <!-- Быстрое копирование -->
-      <div class="copy-card">
-        <div class="copy-card-title">📋 Последние посты</div>
-        <div style="margin-bottom:12px;">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Количество постов</div>
-          <div class="number-input">
-            <button class="num-btn" onclick="changeCount(-1)">−</button>
-            <div class="num-display" id="countDisplay">10</div>
-            <button class="num-btn" onclick="changeCount(1)">+</button>
-          </div>
-        </div>
-        <button class="big-btn accent" onclick="startCopyLast()">
-          ▶ Копировать
-        </button>
-        <div class="progress-wrap" id="copyProgress">
-          <div class="progress-label">
-            <span id="progressText">Копирую...</span>
-            <span id="progressPct">0%</span>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" id="progressFill"></div>
-          </div>
-        </div>
+  <footer>TG_STORE © 2025 — Все права защищены</footer>
+</div>
+
+<!-- ==================== ADMIN PAGE ==================== -->
+<div class="page" id="adminPage">
+
+  <!-- LOGIN SCREEN -->
+  <div id="loginScreen" style="display:none;min-height:calc(100vh - 72px);align-items:center;justify-content:center;padding:24px">
+    <div class="login-box fade">
+      <div class="login-logo">⚙ ADMIN</div>
+      <div class="login-sub">Введите пароль для входа в панель</div>
+      <div id="loginErr" class="login-err hidden">Неверный пароль</div>
+      <div class="form-group">
+        <label class="form-label">Пароль</label>
+        <input type="password" class="form-input" id="pwInput" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
       </div>
+      <button class="btn btn-primary" style="width:100%" onclick="doLogin()">Войти</button>
+      <div style="margin-top:16px;text-align:center;font-size:11px;color:var(--muted);font-family:var(--mono)">Пароль по умолчанию: admin123<br>Смените в настройках</div>
+    </div>
+  </div>
 
-      <!-- Поиск по словам -->
-      <div class="copy-card">
-        <div class="copy-card-title">🔎 Поиск по ключевым словам</div>
-
-        <div class="tags-wrap" id="tagsList">
-          <div class="tag">#avatar <span class="tag-remove" onclick="removeTag(this)">×</span></div>
-          <div class="tag">#anime <span class="tag-remove" onclick="removeTag(this)">×</span></div>
-        </div>
-
-        <div style="display:flex;gap:8px;margin-bottom:10px;">
-          <input class="input-field" id="tagInput" placeholder="+ ключевое слово" style="margin:0;flex:1;"
-                 onkeydown="if(event.key==='Enter')addTag()">
-          <button class="big-btn outline" style="margin:0;width:auto;padding:0 14px;font-size:10px;" onclick="addTag()">Добавить</button>
-        </div>
-
-        <div class="number-input" style="margin-bottom:10px;">
-          <button class="num-btn" onclick="changeSearchCount(-5)">−</button>
-          <div style="flex:1;text-align:center;">
-            <div style="font-size:9px;color:var(--muted);">ИСКАТЬ</div>
-            <div class="num-display" id="searchCountDisplay" style="font-size:14px;">50</div>
-          </div>
-          <button class="num-btn" onclick="changeSearchCount(5)">+</button>
-        </div>
-
-        <button class="big-btn accent" onclick="startSearchCopy()">
-          🔍 Найти и скопировать
-        </button>
-
-        <div class="progress-wrap" id="searchProgress">
-          <div class="progress-label">
-            <span id="searchProgressText">Ищу...</span>
-            <span id="searchProgressPct">0%</span>
-          </div>
-          <div class="progress-bar">
-            <div class="progress-fill" id="searchProgressFill"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Настройки копирования -->
-      <div class="copy-card">
-        <div class="copy-card-title">⚙️ Параметры копирования</div>
-        <div class="settings-group" style="margin:0;border-radius:10px;">
-          <div class="setting-row" onclick="toggleSettingInline('media')">
-            <div class="setting-info">
-              <div class="setting-name">📸 Фото и Видео</div>
-            </div>
-            <div class="toggle on" id="toggle_media"></div>
-          </div>
-          <div class="setting-row" onclick="toggleSettingInline('caption')">
-            <div class="setting-info">
-              <div class="setting-name">📝 Текст поста</div>
-            </div>
-            <div class="toggle on" id="toggle_caption"></div>
-          </div>
-          <div class="setting-row" onclick="toggleSettingInline('links')">
-            <div class="setting-info">
-              <div class="setting-name">🔗 Ссылки boost/chat</div>
-            </div>
-            <div class="toggle off" id="toggle_links"></div>
-          </div>
-          <div class="setting-row" onclick="toggleSettingInline('avatar')">
-            <div class="setting-info">
-              <div class="setting-name">🖼 Аватарка канала</div>
-            </div>
-            <div class="toggle off" id="toggle_avatar"></div>
-          </div>
-        </div>
-      </div>
+  <!-- ADMIN LAYOUT -->
+  <div id="adminLayout" class="admin-layout hidden">
+    <!-- SIDEBAR -->
+    <div class="admin-sidebar">
+      <div class="sidebar-label">Основное</div>
+      <div class="sidebar-item active" onclick="adminTab('dashboard')" data-tab="dashboard"><span class="s-icon">📊</span>Дашборд</div>
+      <div class="sidebar-item" onclick="adminTab('products')" data-tab="products"><span class="s-icon">📦</span>Товары</div>
+      <div class="sidebar-label">Управление</div>
+      <div class="sidebar-item" onclick="adminTab('settings')" data-tab="settings"><span class="s-icon">⚙️</span>Настройки</div>
+      <div class="sidebar-item" onclick="adminLogout()"><span class="s-icon">🚪</span>Выйти</div>
     </div>
 
-    <!-- SCHEDULER -->
-    <div class="section" id="scheduler">
+    <!-- CONTENT -->
+    <div class="admin-content">
 
-      <div class="scheduler-timer">
-        <div class="timer-label">⏱ До следующего запуска</div>
-        <div class="timer-value" id="timerDisplay">--:--:--</div>
-        <div class="timer-sub" id="timerSub">Планировщик не запущен</div>
-      </div>
-
-      <div class="copy-card">
-        <div class="copy-card-title">🔧 Настройка расписания</div>
-
-        <div style="margin-bottom:12px;">
-          <div style="font-size:11px;color:var(--muted);margin-bottom:8px;">Ключевые слова</div>
-          <div class="tags-wrap" id="schedTagsList">
-            <div class="tag">#avatar <span class="tag-remove" onclick="removeSchedTag(this)">×</span></div>
-          </div>
-          <div style="display:flex;gap:8px;">
-            <input class="input-field" id="schedTagInput" placeholder="+ слово" style="margin:0;flex:1;"
-                   onkeydown="if(event.key==='Enter')addSchedTag()">
-            <button class="big-btn outline" style="margin:0;width:auto;padding:0 14px;font-size:10px;" onclick="addSchedTag()">+</button>
-          </div>
+      <!-- DASHBOARD -->
+      <div id="tab-dashboard">
+        <div class="admin-title">Дашборд</div>
+        <div class="admin-sub">Общая статистика магазина</div>
+        <div class="admin-stats">
+          <div class="a-stat"><div class="a-stat-n" id="ds-products">0</div><div class="a-stat-l">Товаров</div></div>
+          <div class="a-stat"><div class="a-stat-n" id="ds-total">0</div><div class="a-stat-l">Всего аккаунтов</div></div>
+          <div class="a-stat"><div class="a-stat-n" id="ds-active">0</div><div class="a-stat-l">Активных позиций</div></div>
+          <div class="a-stat"><div class="a-stat-n" id="ds-sold">0</div><div class="a-stat-l">Продано</div></div>
         </div>
 
-        <div class="input-row" style="margin-bottom:12px;">
+        <div class="admin-table-wrap">
+          <div class="admin-table-head">
+            <div class="admin-table-title">Позиции с низким запасом</div>
+          </div>
+          <table class="table">
+            <thead><tr><th>Название</th><th>Тип</th><th>Цена</th><th>В наличии</th><th>Статус</th></tr></thead>
+            <tbody id="dashLowStock"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PRODUCTS TAB -->
+      <div id="tab-products" class="hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px">
           <div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Постов за раз</div>
-            <div class="number-input">
-              <button class="num-btn" onclick="changeSchedCount(-1)">−</button>
-              <div class="num-display" id="schedCountDisplay" style="font-size:14px;">10</div>
-              <button class="num-btn" onclick="changeSchedCount(1)">+</button>
-            </div>
+            <div class="admin-title">Товары</div>
+            <div class="admin-sub" style="margin-bottom:0">Управление каталогом аккаунтов</div>
           </div>
-          <div>
-            <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Каждые (часов)</div>
-            <div class="number-input">
-              <button class="num-btn" onclick="changeSchedInterval(-1)">−</button>
-              <div class="num-display" id="schedIntervalDisplay" style="font-size:14px;">24</div>
-              <button class="num-btn" onclick="changeSchedInterval(1)">+</button>
-            </div>
-          </div>
+          <button class="btn btn-primary" onclick="openModal('add')">+ Добавить товар</button>
         </div>
-
-        <button class="big-btn accent" id="schedStartBtn" onclick="toggleScheduler()">
-          ▶ Запустить планировщик
-        </button>
+        <div class="prod-list" id="adminProdList"></div>
       </div>
 
-      <div class="log-card">
-        <div class="log-header">
-          <div class="log-title">📊 История планировщика</div>
-        </div>
-        <div id="schedLogs">
-          <div class="log-item">
-            <div class="log-time">вчера</div>
-            <div class="log-msg success">✓ Отправлено 10 постов</div>
+      <!-- SETTINGS TAB -->
+      <div id="tab-settings" class="hidden">
+        <div class="admin-title">Настройки</div>
+        <div class="admin-sub">Параметры магазина и аккаунта</div>
+
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;padding:28px;max-width:520px">
+          <div class="form-group">
+            <label class="form-label">Ссылка Telegram</label>
+            <input type="text" class="form-input" id="set-tg" placeholder="https://t.me/yourusername">
           </div>
-          <div class="log-item">
-            <div class="log-time">вчера</div>
-            <div class="log-msg info">Проверено 234 сообщений</div>
+          <div class="form-group">
+            <label class="form-label">Ссылка Lolz.live</label>
+            <input type="text" class="form-input" id="set-lolz" placeholder="https://lolz.live/yourusername">
           </div>
+          <div class="form-group">
+            <label class="form-label">Название магазина</label>
+            <input type="text" class="form-input" id="set-name" placeholder="TG_STORE">
+          </div>
+          <div class="form-group">
+            <label class="form-label">Продано аккаунтов (отображается на главной)</label>
+            <input type="number" class="form-input" id="set-sold" placeholder="500">
+          </div>
+          <hr style="border-color:var(--border);margin:20px 0">
+          <div class="form-group">
+            <label class="form-label">Новый пароль</label>
+            <input type="password" class="form-input" id="set-pw" placeholder="Оставьте пустым чтобы не менять">
+          </div>
+          <button class="btn btn-primary" onclick="saveSettings()">Сохранить настройки</button>
         </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MODAL ==================== -->
+<div class="modal-overlay hidden" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" style="position:relative">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title" id="modalTitle">Добавить товар</div>
+    <div class="modal-sub" id="modalSub">Заполните данные и загрузите tdata файлы</div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Название</label>
+        <input type="text" class="form-input" id="f-name" placeholder="Стартер x10">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Тип аккаунта</label>
+        <select class="form-select" id="f-type">
+          <option value="Свежий">Свежий</option>
+          <option value="Стандарт">Стандарт (7+ дней)</option>
+          <option value="Премиум">Премиум</option>
+          <option value="Опт">Опт</option>
+        </select>
       </div>
     </div>
 
-    <!-- SETTINGS -->
-    <div class="section" id="settings">
+    <div class="form-group">
+      <label class="form-label">Описание</label>
+      <textarea class="form-textarea" id="f-desc" placeholder="Краткое описание товара..."></textarea>
+    </div>
 
-      <div class="settings-group">
-        <div class="group-title">📡 Каналы</div>
-        <div class="setting-row" onclick="editChannel('source')">
-          <div class="setting-info">
-            <div class="setting-name">Источник</div>
-            <div class="setting-desc" id="srcSetting">@anime_src</div>
-          </div>
-          <span style="color:var(--muted);font-size:16px;">›</span>
-        </div>
-        <div class="setting-row" onclick="editChannel('target')">
-          <div class="setting-info">
-            <div class="setting-name">Целевой канал</div>
-            <div class="setting-desc" id="tgtSetting">@my_channel</div>
-          </div>
-          <span style="color:var(--muted);font-size:16px;">›</span>
-        </div>
-        <div class="setting-row" onclick="editDelay()">
-          <div class="setting-info">
-            <div class="setting-name">Задержка между постами</div>
-            <div class="setting-desc" id="delaySetting">5 секунд</div>
-          </div>
-          <span style="color:var(--muted);font-size:16px;">›</span>
-        </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Цена (₽ за шт)</label>
+        <input type="number" class="form-input" id="f-price" placeholder="30">
       </div>
-
-      <div class="settings-group">
-        <div class="group-title">📋 Что копировать</div>
-        <div class="setting-row" onclick="toggleSetting('media')">
-          <div class="setting-info">
-            <div class="setting-name">📸 Фото и Видео</div>
-            <div class="setting-desc">Копировать медиа-файлы</div>
-          </div>
-          <div class="toggle on" id="s_media"></div>
-        </div>
-        <div class="setting-row" onclick="toggleSetting('caption')">
-          <div class="setting-info">
-            <div class="setting-name">📝 Текст подписи</div>
-            <div class="setting-desc">Копировать текст поста</div>
-          </div>
-          <div class="toggle on" id="s_caption"></div>
-        </div>
-        <div class="setting-row" onclick="toggleSetting('avatar')">
-          <div class="setting-info">
-            <div class="setting-name">🖼 Аватарка канала</div>
-            <div class="setting-desc">Добавлять логотип источника</div>
-          </div>
-          <div class="toggle off" id="s_avatar"></div>
-        </div>
-        <div class="setting-row" onclick="toggleSetting('links')">
-          <div class="setting-info">
-            <div class="setting-name">🔗 Ссылки boost/chat</div>
-            <div class="setting-desc">Оставлять рекламные ссылки</div>
-          </div>
-          <div class="toggle off" id="s_links"></div>
-        </div>
-      </div>
-
-      <div class="settings-group">
-        <div class="group-title">📝 Подпись к постам</div>
-        <div class="setting-row" onclick="editFooter()">
-          <div class="setting-info">
-            <div class="setting-name">Текст внизу поста</div>
-            <div class="setting-desc" id="footerPreview">Не установлен</div>
-          </div>
-          <span style="color:var(--muted);font-size:16px;">›</span>
-        </div>
-      </div>
-
-      <div class="settings-group">
-        <div class="group-title">🚨 Опасная зона</div>
-        <div class="setting-row" onclick="clearHistory()" style="color:var(--danger);">
-          <div class="setting-info">
-            <div class="setting-name" style="color:var(--danger);">Очистить историю</div>
-            <div class="setting-desc">Удалить список отправленных постов</div>
-          </div>
-          <span style="color:var(--danger);font-size:16px;">›</span>
-        </div>
+      <div class="form-group">
+        <label class="form-label">Мин. заказ (шт)</label>
+        <input type="number" class="form-input" id="f-minorder" placeholder="1">
       </div>
     </div>
 
-  </div><!-- .app -->
+    <div class="form-group">
+      <label class="form-label">Теги (через запятую)</label>
+      <input type="text" class="form-input" id="f-tags" placeholder="Виртуальный номер, Быстрая выдача, Без 2FA">
+    </div>
 
-  <!-- Toast -->
-  <div class="toast" id="toast"></div>
+    <div class="form-group">
+      <label class="form-label">Загрузить tdata / txt файлы</label>
+      <div class="upload-zone" id="uploadZone" onclick="document.getElementById('fileInput').click()" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFiles(event)">
+        <input type="file" id="fileInput" multiple accept=".zip,.txt,.session,.tdata,application/zip" onchange="handleFiles(this.files)">
+        <div class="upload-icon">📁</div>
+        <div class="upload-text">Перетащите файлы или нажмите</div>
+        <div class="upload-sub">Поддерживаются: .zip .txt .session .tdata</div>
+      </div>
+      <div class="uploaded-files" id="uploadedFiles"></div>
+      <div class="form-hint" id="uploadCount">Файлов загружено: 0</div>
+    </div>
 
-  <script>
-  // ===== STATE =====
-  const state = {
-    totalCopied: 142,
-    todayCopied: 18,
-    totalFound: 89,
-    totalSkipped: 23,
-    monitoring: false,
-    schedulerRunning: false,
-    copyCount: 10,
-    searchCount: 50,
-    schedCount: 10,
-    schedInterval: 24,
-    settings: {
-      media: true, caption: true, links: false, avatar: false
-    },
-    delay: 5,
-    source: '@anime_src',
-    target: '@my_channel',
-    footer: '',
-    timerInterval: null,
-    nextRun: null
+    <div class="form-group" style="display:flex;align-items:center;justify-content:space-between">
+      <div>
+        <div style="font-size:14px;font-weight:600">Показывать на сайте</div>
+        <div style="font-size:12px;color:var(--muted)">Товар будет виден покупателям</div>
+      </div>
+      <label class="toggle"><input type="checkbox" id="f-visible" checked><span class="toggle-slider"></span></label>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Отмена</button>
+      <button class="btn btn-primary" onclick="saveProduct()">Сохранить товар</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// STATE
+// ============================================================
+let products = JSON.parse(localStorage.getItem('tg_products') || '[]');
+let settings = JSON.parse(localStorage.getItem('tg_settings') || JSON.stringify({
+  tg: 'https://t.me/yourusername',
+  lolz: 'https://lolz.live/yourusername',
+  name: 'TG_STORE',
+  sold: 500,
+  password: 'admin123'
+}));
+let editingId = null;
+let uploadedFilesData = [];
+let loggedIn = sessionStorage.getItem('tg_admin') === '1';
+
+// ============================================================
+// ROUTER
+// ============================================================
+function goPage(p) {
+  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+  if (p === 'admin') {
+    document.getElementById('adminPage').classList.add('active');
+    if (!loggedIn) showLogin();
+    else showAdmin();
+  } else {
+    document.getElementById('homePage').classList.add('active');
+    applySettings();
+    renderCatalog();
+  }
+}
+
+function goSection(id) {
+  goPage('home');
+  setTimeout(() => {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({behavior:'smooth'});
+  }, 50);
+}
+
+// ============================================================
+// AUTH
+// ============================================================
+function showLogin() {
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('adminLayout').classList.add('hidden');
+}
+function showAdmin() {
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('adminLayout').classList.remove('hidden');
+  adminTab('dashboard');
+}
+function doLogin() {
+  const pw = document.getElementById('pwInput').value;
+  if (pw === settings.password) {
+    loggedIn = true;
+    sessionStorage.setItem('tg_admin', '1');
+    document.getElementById('loginErr').classList.add('hidden');
+    showAdmin();
+  } else {
+    document.getElementById('loginErr').classList.remove('hidden');
+    document.getElementById('pwInput').value = '';
+  }
+}
+function adminLogout() {
+  loggedIn = false;
+  sessionStorage.removeItem('tg_admin');
+  goPage('home');
+}
+
+// ============================================================
+// ADMIN TABS
+// ============================================================
+function adminTab(tab) {
+  document.querySelectorAll('[data-tab]').forEach(x => x.classList.remove('active'));
+  const btn = document.querySelector(`[data-tab="${tab}"]`);
+  if (btn) btn.classList.add('active');
+
+  document.querySelectorAll('[id^="tab-"]').forEach(x => x.classList.add('hidden'));
+  const panel = document.getElementById('tab-' + tab);
+  if (panel) panel.classList.remove('hidden');
+
+  if (tab === 'dashboard') renderDashboard();
+  if (tab === 'products') renderAdminProducts();
+  if (tab === 'settings') loadSettingsForm();
+}
+
+// ============================================================
+// HOME RENDER
+// ============================================================
+function applySettings() {
+  document.getElementById('statSold').textContent = (settings.sold || 0) + '+';
+  document.querySelectorAll('a[href*="t.me"]').forEach(a => {
+    if (settings.tg) a.href = settings.tg;
+  });
+}
+
+function renderCatalog() {
+  const grid = document.getElementById('catalogGrid');
+  const visible = products.filter(p => p.visible !== false);
+
+  if (!visible.length) {
+    grid.innerHTML = `<div class="empty-catalog"><div class="e-icon">📭</div><div>Каталог пока пуст</div><div style="font-size:13px;color:var(--muted);margin-top:8px">Добавьте товары через панель администратора</div></div>`;
+    grid.style.display = 'block';
+    return;
+  }
+
+  grid.style.display = '';
+  grid.innerHTML = visible.map(p => {
+    const stock = p.files ? p.files.length : 0;
+    let stockBadge, stockClass;
+    if (stock === 0) { stockBadge = 'Нет в наличии'; stockClass = 'stock-out'; }
+    else if (stock < 5) { stockBadge = `Мало: ${stock} шт`; stockClass = 'stock-low'; }
+    else { stockBadge = `В наличии: ${stock} шт`; stockClass = 'stock-ok'; }
+
+    const tags = (p.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+
+    return `<div class="prod-card">
+      <div class="prod-type">${p.type || 'Аккаунт'}</div>
+      <div class="prod-name">${p.name}</div>
+      <div class="prod-desc">${p.desc || ''}</div>
+      ${tags.length ? `<div class="prod-tags">${tags.map(t=>`<span class="prod-tag">${t}</span>`).join('')}</div>` : ''}
+      <div class="prod-footer">
+        <div>
+          <div class="prod-price">${p.price ? 'от '+p.price+'₽' : 'Договорная'} <span>${p.minorder > 1 ? 'мин '+p.minorder+' шт' : '/ шт'}</span></div>
+          <div class="prod-stock ${stockClass}" style="margin-top:6px">${stockBadge}</div>
+        </div>
+        <a href="${settings.tg || 'https://t.me/yourusername'}" target="_blank" class="btn btn-primary btn-sm">Купить</a>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ============================================================
+// ADMIN: DASHBOARD
+// ============================================================
+function renderDashboard() {
+  const total = products.reduce((s, p) => s + (p.files ? p.files.length : 0), 0);
+  const active = products.filter(p => p.visible !== false).length;
+  document.getElementById('ds-products').textContent = products.length;
+  document.getElementById('ds-total').textContent = total;
+  document.getElementById('ds-active').textContent = active;
+  document.getElementById('ds-sold').textContent = settings.sold || 0;
+
+  const low = products.filter(p => (p.files ? p.files.length : 0) < 5);
+  const tbody = document.getElementById('dashLowStock');
+  if (!low.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px">Нет позиций с низким запасом 🎉</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = low.map(p => {
+    const stock = p.files ? p.files.length : 0;
+    const cls = stock === 0 ? 'badge-danger' : 'badge-warn';
+    return `<tr>
+      <td style="font-weight:600">${p.name}</td>
+      <td><span class="badge badge-ok">${p.type || '-'}</span></td>
+      <td style="font-family:var(--mono)">${p.price ? p.price+'₽' : '-'}</td>
+      <td style="font-family:var(--mono)">${stock}</td>
+      <td><span class="badge ${cls}">${stock === 0 ? 'Нет' : 'Мало'}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+// ============================================================
+// ADMIN: PRODUCTS LIST
+// ============================================================
+function renderAdminProducts() {
+  const list = document.getElementById('adminProdList');
+  if (!products.length) {
+    list.innerHTML = `<div style="text-align:center;padding:60px;color:var(--muted)"><div style="font-size:40px;margin-bottom:12px">📦</div>Нет товаров. Добавьте первый!</div>`;
+    return;
+  }
+  list.innerHTML = products.map((p, i) => {
+    const stock = p.files ? p.files.length : 0;
+    const stockCls = stock === 0 ? 'badge-danger' : stock < 5 ? 'badge-warn' : 'badge-ok';
+    return `<div class="prod-row">
+      <div class="prod-row-info">
+        <div class="prod-row-name">${p.name}</div>
+        <div class="prod-row-meta">${p.type || ''} · ${stock} файлов · ${p.tags || 'нет тегов'}</div>
+      </div>
+      <span class="badge ${stockCls}" style="flex-shrink:0">${stock} шт</span>
+      <div class="prod-row-price">${p.price ? p.price+'₽' : '—'}</div>
+      <label class="toggle" title="${p.visible !== false ? 'Скрыть' : 'Показать'}">
+        <input type="checkbox" ${p.visible !== false ? 'checked' : ''} onchange="toggleVisible(${i})">
+        <span class="toggle-slider"></span>
+      </label>
+      <div class="prod-row-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openModal('edit',${i})">✏️ Изменить</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteProduct(${i})">🗑</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleVisible(i) {
+  products[i].visible = !products[i].visible;
+  saveProducts();
+  renderAdminProducts();
+}
+
+function deleteProduct(i) {
+  if (!confirm(`Удалить "${products[i].name}"?`)) return;
+  products.splice(i, 1);
+  saveProducts();
+  renderAdminProducts();
+  notify('Товар удалён', 'ok');
+}
+
+// ============================================================
+// MODAL
+// ============================================================
+function openModal(mode, idx) {
+  editingId = mode === 'edit' ? idx : null;
+  uploadedFilesData = [];
+
+  const isEdit = mode === 'edit';
+  document.getElementById('modalTitle').textContent = isEdit ? 'Редактировать товар' : 'Добавить товар';
+  document.getElementById('modalSub').textContent = isEdit ? 'Измените нужные поля' : 'Заполните данные и загрузите tdata файлы';
+
+  if (isEdit && idx !== null) {
+    const p = products[idx];
+    document.getElementById('f-name').value = p.name || '';
+    document.getElementById('f-type').value = p.type || 'Свежий';
+    document.getElementById('f-desc').value = p.desc || '';
+    document.getElementById('f-price').value = p.price || '';
+    document.getElementById('f-minorder').value = p.minorder || 1;
+    document.getElementById('f-tags').value = p.tags || '';
+    document.getElementById('f-visible').checked = p.visible !== false;
+    uploadedFilesData = p.files ? [...p.files] : [];
+  } else {
+    document.getElementById('f-name').value = '';
+    document.getElementById('f-type').value = 'Свежий';
+    document.getElementById('f-desc').value = '';
+    document.getElementById('f-price').value = '';
+    document.getElementById('f-minorder').value = 1;
+    document.getElementById('f-tags').value = '';
+    document.getElementById('f-visible').checked = true;
+  }
+
+  renderUploadedFiles();
+  document.getElementById('modalOverlay').classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.add('hidden');
+  document.body.style.overflow = '';
+  editingId = null;
+  uploadedFilesData = [];
+}
+
+function saveProduct() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { notify('Введите название', 'err'); return; }
+
+  const p = {
+    name,
+    type: document.getElementById('f-type').value,
+    desc: document.getElementById('f-desc').value.trim(),
+    price: document.getElementById('f-price').value || '',
+    minorder: parseInt(document.getElementById('f-minorder').value) || 1,
+    tags: document.getElementById('f-tags').value.trim(),
+    visible: document.getElementById('f-visible').checked,
+    files: uploadedFilesData,
+    updatedAt: Date.now()
   };
 
-  // Telegram WebApp init
-  const tg = window.Telegram?.WebApp;
-  if (tg) {
-    tg.expand();
-    tg.setHeaderColor('#0a0a0f');
-    tg.setBackgroundColor('#0a0a0f');
+  if (editingId !== null) {
+    products[editingId] = {...products[editingId], ...p};
+  } else {
+    p.createdAt = Date.now();
+    products.push(p);
   }
 
-  // ===== TABS =====
-  function switchTab(name, btn) {
-    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.getElementById(name).classList.add('active');
-    btn.classList.add('active');
-  }
+  saveProducts();
+  closeModal();
+  renderAdminProducts();
+  notify(editingId !== null ? 'Товар обновлён' : 'Товар добавлен', 'ok');
+}
 
-  // ===== UPDATE UI =====
-  function updateStats() {
-    document.getElementById('totalCopied').textContent = state.totalCopied;
-    document.getElementById('todayCopied').textContent = state.todayCopied;
-    document.getElementById('totalFound').textContent = state.totalFound;
-    document.getElementById('totalSkipped').textContent = state.totalSkipped;
-  }
-
-  function animateNumber(el, target) {
-    let current = parseInt(el.textContent) || 0;
-    const step = Math.ceil((target - current) / 20);
-    const timer = setInterval(() => {
-      current = Math.min(current + step, target);
-      el.textContent = current;
-      if (current >= target) clearInterval(timer);
-    }, 30);
-  }
-
-  // ===== TOGGLE =====
-  function toggleSettingInline(key) {
-    state.settings[key] = !state.settings[key];
-    const el = document.getElementById('toggle_' + key);
-    el.classList.toggle('on', state.settings[key]);
-    el.classList.toggle('off', !state.settings[key]);
-    syncSettings();
-    showToast(state.settings[key] ? '✅ Включено' : '❌ Выключено', 'info');
-  }
-
-  function toggleSetting(key) {
-    state.settings[key] = !state.settings[key];
-    const el = document.getElementById('s_' + key);
-    el.classList.toggle('on', state.settings[key]);
-    el.classList.toggle('off', !state.settings[key]);
-    const el2 = document.getElementById('toggle_' + key);
-    if (el2) {
-      el2.classList.toggle('on', state.settings[key]);
-      el2.classList.toggle('off', !state.settings[key]);
-    }
-    showToast(state.settings[key] ? '✅ Включено' : '❌ Выключено', 'info');
-    sendToBot({ action: 'toggle_setting', key, value: state.settings[key] });
-  }
-
-  function syncSettings() {
-    Object.keys(state.settings).forEach(k => {
-      const el = document.getElementById('s_' + k);
-      if (el) {
-        el.classList.toggle('on', state.settings[k]);
-        el.classList.toggle('off', !state.settings[k]);
-      }
-    });
-  }
-
-  // ===== MONITORING =====
-  function toggleMonitoring() {
-    state.monitoring = !state.monitoring;
-    const badge = document.getElementById('monStatus');
-    const emoji = document.getElementById('monEmoji');
-    const text = document.getElementById('monText');
-
-    if (state.monitoring) {
-      badge.className = 'status-badge on';
-      badge.innerHTML = '<div class="badge-dot pulsing"></div> Работает';
-      emoji.textContent = '⏸';
-      text.textContent = 'Стоп';
-      addLog('success', '▶ Мониторинг запущен');
-      showToast('👀 Мониторинг запущен', 'success');
-    } else {
-      badge.className = 'status-badge off';
-      badge.innerHTML = '<div class="badge-dot"></div> Выкл';
-      emoji.textContent = '👁';
-      text.textContent = 'Мониторинг';
-      addLog('warn', '⏸ Мониторинг остановлен');
-      showToast('⏹ Мониторинг остановлен', 'info');
-    }
-    sendToBot({ action: state.monitoring ? 'start_monitoring' : 'stop_monitoring' });
-  }
-
-  // ===== COPY =====
-  let copyCount = 10;
-  function changeCount(d) {
-    copyCount = Math.max(1, Math.min(100, copyCount + d));
-    document.getElementById('countDisplay').textContent = copyCount;
-  }
-
-  let searchCount = 50;
-  function changeSearchCount(d) {
-    searchCount = Math.max(5, Math.min(1000, searchCount + d));
-    document.getElementById('searchCountDisplay').textContent = searchCount;
-  }
-
-  function startCopyLast() {
-    const progress = document.getElementById('copyProgress');
-    const fill = document.getElementById('progressFill');
-    const pct = document.getElementById('progressPct');
-    const txt = document.getElementById('progressText');
-
-    progress.classList.add('show');
-    fill.style.width = '0%';
-    let p = 0;
-
-    showToast(`📋 Копирую ${copyCount} постов...`, 'info');
-    addLog('info', `▶ Копирование ${copyCount} постов`);
-
-    const timer = setInterval(() => {
-      p += Math.random() * 8 + 2;
-      if (p >= 100) {
-        p = 100;
-        clearInterval(timer);
-        setTimeout(() => {
-          progress.classList.remove('show');
-          const added = Math.floor(copyCount * (0.7 + Math.random() * 0.3));
-          state.totalCopied += added;
-          state.todayCopied += added;
-          animateNumber(document.getElementById('totalCopied'), state.totalCopied);
-          animateNumber(document.getElementById('todayCopied'), state.todayCopied);
-          addLog('success', `✓ Скопировано ${added} из ${copyCount} постов`);
-          showToast(`✅ Скопировано ${added} постов!`, 'success');
-        }, 500);
-      }
-      fill.style.width = p + '%';
-      pct.textContent = Math.floor(p) + '%';
-      txt.textContent = `Копирую ${Math.floor(p * copyCount / 100)}/${copyCount}...`;
-    }, 120);
-
-    sendToBot({ action: 'copy_last', count: copyCount, settings: state.settings });
-  }
-
-  function startSearchCopy() {
-    const tags = [...document.querySelectorAll('#tagsList .tag')].map(t =>
-      t.textContent.replace('×','').trim()
-    );
-    if (!tags.length) { showToast('⚠️ Добавьте ключевые слова!', 'error'); return; }
-
-    const progress = document.getElementById('searchProgress');
-    const fill = document.getElementById('searchProgressFill');
-    const pct = document.getElementById('searchProgressPct');
-    const txt = document.getElementById('searchProgressText');
-
-    progress.classList.add('show');
-    fill.style.width = '0%';
-    let p = 0, checked = 0;
-
-    showToast(`🔍 Ищу посты...`, 'info');
-    addLog('info', `🔍 Поиск по: ${tags.join(', ')}`);
-
-    const timer = setInterval(() => {
-      p += Math.random() * 3 + 1;
-      checked += Math.floor(Math.random() * 50 + 20);
-      if (p >= 100) {
-        p = 100;
-        clearInterval(timer);
-        setTimeout(() => {
-          progress.classList.remove('show');
-          const found = Math.floor(searchCount * (0.5 + Math.random() * 0.4));
-          state.totalCopied += found;
-          state.totalFound += found;
-          state.totalSkipped += Math.floor(found * 0.2);
-          animateNumber(document.getElementById('totalCopied'), state.totalCopied);
-          animateNumber(document.getElementById('totalFound'), state.totalFound);
-          addLog('success', `✓ Найдено ${found}, проверено ${checked}`);
-          showToast(`✅ Найдено ${found} постов!`, 'success');
-        }, 500);
-      }
-      fill.style.width = p + '%';
-      pct.textContent = Math.floor(p) + '%';
-      txt.textContent = `Проверено ${checked} сообщений...`;
-    }, 200);
-
-    sendToBot({ action: 'copy_keywords', keywords: tags, count: searchCount, settings: state.settings });
-  }
-
-  // ===== TAGS =====
-  function addTag() {
-    const input = document.getElementById('tagInput');
-    const val = input.value.trim();
-    if (!val) return;
-    const tag = document.createElement('div');
-    tag.className = 'tag';
-    tag.innerHTML = `${val} <span class="tag-remove" onclick="removeTag(this)">×</span>`;
-    document.getElementById('tagsList').appendChild(tag);
-    input.value = '';
-    haptic();
-  }
-
-  function removeTag(el) {
-    el.parentElement.remove();
-    haptic();
-  }
-
-  function addSchedTag() {
-    const input = document.getElementById('schedTagInput');
-    const val = input.value.trim();
-    if (!val) return;
-    const tag = document.createElement('div');
-    tag.className = 'tag';
-    tag.innerHTML = `${val} <span class="tag-remove" onclick="removeSchedTag(this)">×</span>`;
-    document.getElementById('schedTagsList').appendChild(tag);
-    input.value = '';
-    haptic();
-  }
-
-  function removeSchedTag(el) {
-    el.parentElement.remove();
-    haptic();
-  }
-
-  // ===== SCHEDULER =====
-  let schedCount = 10;
-  let schedInterval = 24;
-
-  function changeSchedCount(d) {
-    schedCount = Math.max(1, Math.min(100, schedCount + d));
-    document.getElementById('schedCountDisplay').textContent = schedCount;
-  }
-
-  function changeSchedInterval(d) {
-    schedInterval = Math.max(1, Math.min(168, schedInterval + d));
-    document.getElementById('schedIntervalDisplay').textContent = schedInterval;
-  }
-
-  function toggleScheduler() {
-    state.schedulerRunning = !state.schedulerRunning;
-    const btn = document.getElementById('schedStartBtn');
-    const badge = document.getElementById('schedStatus');
-
-    if (state.schedulerRunning) {
-      const tags = [...document.querySelectorAll('#schedTagsList .tag')].map(t =>
-        t.textContent.replace('×','').trim()
-      );
-      if (!tags.length) {
-        showToast('⚠️ Добавьте ключевые слова!', 'error');
-        state.schedulerRunning = false;
-        return;
-      }
-
-      btn.textContent = '⏸ Остановить планировщик';
-      btn.style.background = 'linear-gradient(135deg, #374151, #1f2937)';
-      badge.className = 'status-badge on';
-      badge.innerHTML = '<div class="badge-dot pulsing"></div> Работает';
-
-      state.nextRun = Date.now() + schedInterval * 3600000;
-      startTimer();
-
-      addLog('success', `▶ Планировщик: ${schedCount} постов/${schedInterval}ч`);
-      showToast('⏰ Планировщик запущен!', 'success');
-      sendToBot({ action: 'start_scheduler', count: schedCount, interval: schedInterval, keywords: tags });
-    } else {
-      btn.textContent = '▶ Запустить планировщик';
-      btn.style.background = '';
-      badge.className = 'status-badge off';
-      badge.innerHTML = '<div class="badge-dot"></div> Выкл';
-
-      stopTimer();
-      document.getElementById('timerDisplay').textContent = '--:--:--';
-      document.getElementById('timerSub').textContent = 'Планировщик не запущен';
-      addLog('warn', '⏸ Планировщик остановлен');
-      showToast('⏹ Планировщик остановлен', 'info');
-      sendToBot({ action: 'stop_scheduler' });
-    }
-  }
-
-  function startTimer() {
-    updateTimer();
-    state.timerInterval = setInterval(updateTimer, 1000);
-  }
-
-  function stopTimer() {
-    clearInterval(state.timerInterval);
-  }
-
-  function updateTimer() {
-    if (!state.nextRun) return;
-    const remaining = Math.max(0, state.nextRun - Date.now());
-    const h = Math.floor(remaining / 3600000).toString().padStart(2, '0');
-    const m = Math.floor((remaining % 3600000) / 60000).toString().padStart(2, '0');
-    const s = Math.floor((remaining % 60000) / 1000).toString().padStart(2, '0');
-    document.getElementById('timerDisplay').textContent = `${h}:${m}:${s}`;
-    document.getElementById('timerSub').textContent =
-      `Следующий запуск: ${new Date(state.nextRun).toLocaleTimeString('ru-RU', {hour:'2-digit',minute:'2-digit'})}`;
-
-    if (remaining === 0) {
-      state.nextRun = Date.now() + schedInterval * 3600000;
-      addLog('success', `✓ Плановая отправка выполнена`);
-    }
-  }
-
-  // ===== SETTINGS EDIT =====
-  function editChannel(type) {
-    const current = type === 'source' ? state.source : state.target;
-    const label = type === 'source' ? 'Канал-источник' : 'Целевой канал';
-
-    if (tg) {
-      // В реальном боте используем popup
-      tg.showPopup({
-        title: label,
-        message: 'Введите @username или ID канала',
-        buttons: [
-          { id: 'cancel', type: 'cancel' },
-          { id: 'ok', type: 'default', text: 'OK' }
-        ]
+// ============================================================
+// FILE UPLOAD
+// ============================================================
+function handleFiles(fileList) {
+  Array.from(fileList).forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      uploadedFilesData.push({
+        name: file.name,
+        size: file.size,
+        data: e.target.result.split(',')[1] || '',
+        type: file.type,
+        addedAt: Date.now()
       });
-    } else {
-      const val = prompt(`${label}\nТекущий: ${current}`, current);
-      if (val) {
-        if (type === 'source') {
-          state.source = val;
-          document.getElementById('srcDisplay').textContent = val;
-          document.getElementById('srcSetting').textContent = val;
-        } else {
-          state.target = val;
-          document.getElementById('tgtDisplay').textContent = val;
-          document.getElementById('tgtSetting').textContent = val;
-        }
-        showToast('✅ Сохранено!', 'success');
-        sendToBot({ action: 'set_channel', type, value: val });
-      }
-    }
-  }
+      renderUploadedFiles();
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
-  function editDelay() {
-    const val = prompt('Задержка в секундах (0-300):', state.delay);
-    if (val !== null) {
-      const d = parseInt(val);
-      if (!isNaN(d) && d >= 0 && d <= 300) {
-        state.delay = d;
-        document.getElementById('delaySetting').textContent = `${d} секунд`;
-        showToast('✅ Задержка сохранена!', 'success');
-        sendToBot({ action: 'set_delay', value: d });
-      }
-    }
-  }
+function renderUploadedFiles() {
+  const container = document.getElementById('uploadedFiles');
+  const count = document.getElementById('uploadCount');
+  count.textContent = `Файлов загружено: ${uploadedFilesData.length}`;
 
-  function editFooter() {
-    const val = prompt('Текст в конце каждого поста:', state.footer);
-    if (val !== null) {
-      state.footer = val;
-      document.getElementById('footerPreview').textContent = val || 'Не установлен';
-      showToast('✅ Подпись сохранена!', 'success');
-      sendToBot({ action: 'set_footer', value: val });
-    }
-  }
+  container.innerHTML = uploadedFilesData.map((f, i) => `
+    <div class="uploaded-file">
+      <span class="uf-name">📄 ${f.name}</span>
+      <span class="uf-size">${formatSize(f.size)}</span>
+      <button class="uf-del" onclick="removeFile(${i})" title="Удалить">×</button>
+    </div>`).join('');
+}
 
-  // ===== LOGS =====
-  function addLog(type, msg) {
-    const list = document.getElementById('logsList');
-    const now = new Date();
-    const time = now.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+function removeFile(i) {
+  uploadedFilesData.splice(i, 1);
+  renderUploadedFiles();
+}
 
-    const item = document.createElement('div');
-    item.className = 'log-item';
-    item.innerHTML = `<div class="log-time">${time}</div><div class="log-msg ${type}">${msg}</div>`;
+function formatSize(bytes) {
+  if (!bytes) return '?';
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1024/1024).toFixed(1) + ' MB';
+}
 
-    list.insertBefore(item, list.firstChild);
+function dragOver(e) { e.preventDefault(); document.getElementById('uploadZone').classList.add('dragover'); }
+function dragLeave(e) { document.getElementById('uploadZone').classList.remove('dragover'); }
+function dropFiles(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('dragover');
+  handleFiles(e.dataTransfer.files);
+}
 
-    // Лимит 20 записей
-    while (list.children.length > 20) list.removeChild(list.lastChild);
-  }
+// ============================================================
+// SETTINGS
+// ============================================================
+function loadSettingsForm() {
+  document.getElementById('set-tg').value = settings.tg || '';
+  document.getElementById('set-lolz').value = settings.lolz || '';
+  document.getElementById('set-name').value = settings.name || '';
+  document.getElementById('set-sold').value = settings.sold || 0;
+  document.getElementById('set-pw').value = '';
+}
 
-  function clearLogs() {
-    document.getElementById('logsList').innerHTML =
-      '<div class="log-item"><div class="log-time">сейчас</div><div class="log-msg info">Лог очищен</div></div>';
-    haptic();
-  }
+function saveSettings() {
+  const newPw = document.getElementById('set-pw').value;
+  settings.tg = document.getElementById('set-tg').value.trim();
+  settings.lolz = document.getElementById('set-lolz').value.trim();
+  settings.name = document.getElementById('set-name').value.trim() || 'TG_STORE';
+  settings.sold = parseInt(document.getElementById('set-sold').value) || 0;
+  if (newPw) settings.password = newPw;
 
-  // ===== MISC =====
-  function clearHistory() {
-    if (!confirm('Очистить историю отправленных постов?')) return;
-    state.totalSkipped = 0;
-    animateNumber(document.getElementById('totalSkipped'), 0);
-    addLog('warn', '🗑 История очищена');
-    showToast('🗑 История очищена', 'info');
-    sendToBot({ action: 'clear_history' });
-  }
+  localStorage.setItem('tg_settings', JSON.stringify(settings));
+  notify('Настройки сохранены', 'ok');
+}
 
-  function quickCopy() {
-    switchTab('copy', document.querySelectorAll('.tab')[1]);
-    showToast('💡 Выберите режим копирования', 'info');
-  }
+function saveProducts() {
+  localStorage.setItem('tg_products', JSON.stringify(products));
+}
 
-  // ===== TOAST =====
-  function showToast(msg, type = 'info') {
-    const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.className = `toast ${type} show`;
-    setTimeout(() => t.classList.remove('show'), 2500);
-    haptic();
-  }
+// ============================================================
+// FAQ
+// ============================================================
+function toggleFaq(btn) {
+  const item = btn.closest('.faq-item');
+  const open = item.classList.contains('open');
+  document.querySelectorAll('.faq-item').forEach(x => x.classList.remove('open'));
+  if (!open) item.classList.add('open');
+}
 
-  // ===== HAPTIC =====
-  function haptic(type = 'light') {
-    tg?.HapticFeedback?.impactOccurred(type);
-  }
+// ============================================================
+// NOTIFY
+// ============================================================
+function notify(msg, type = 'ok') {
+  const c = document.getElementById('notifContainer');
+  const el = document.createElement('div');
+  el.className = `notif-item ${type}`;
+  el.textContent = (type === 'ok' ? '✓ ' : '✗ ') + msg;
+  c.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
 
-  // ===== SEND TO BOT =====
-  function sendToBot(data) {
-    if (tg?.sendData) {
-      try { tg.sendData(JSON.stringify(data)); } catch(e) {}
-    }
-    console.log('→ Bot:', data);
-  }
-
-  // ===== INIT =====
-  updateStats();
-  </script>
-  </body>
-  </html>
+// ============================================================
+// INIT
+// ============================================================
+applySettings();
+renderCatalog();
+</script>
+</body>
+</html>
